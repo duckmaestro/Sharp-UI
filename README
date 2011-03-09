@@ -10,3 +10,4 @@ Features include:
  * Auto field population (matching local ID's to field names).
  * Nested declarations -- controls that hold instances of other controls.
  * AddedToDocument/RemovedFromDocument events.
+ * MouseCapture replication.
