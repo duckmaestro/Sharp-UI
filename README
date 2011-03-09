@@ -6,7 +6,7 @@ when building user interface controls in Script# with jQuery.
 
 Features include:
  * Ability to construct your own reusable controls using
-   HTML templates and C# (Script#) codebehind.
+   HTML fragments and C# (Script#) codebehind.
  * Ability to separate logic from layout by using .html(.cs) file pairs
    and partial classes.
  * Support for locally-scoped CSS through CSS rewriting.
