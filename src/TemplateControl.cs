@@ -1,6 +1,24 @@
 ﻿/*
- * Copyright 2011 Clifford Champion
- * */
+Copyright (c) 2010, 2011 Clifford Champion
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
 
 using System;
 using System.Collections;
@@ -8,10 +26,9 @@ using System.Collections.Generic;
 using System.Html;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using CMJ.Wrappers;
 using jQueryApi;
 
-namespace CMJ.UI
+namespace SharpUI
 {
     internal enum CssPosition
     {
@@ -37,7 +54,7 @@ namespace CMJ.UI
         #endregion
 
         private jQueryObject _jqRootElement;
-        public jQueryUIObject RootElement { get { return (jQueryUIObject)_jqRootElement; } }
+        public jQueryObject RootElement { get { return (jQueryObject)_jqRootElement; } }
 
         #region Construction
         private string _strInstanceId;
@@ -711,14 +728,14 @@ namespace CMJ.UI
 
         #region Named Elements/Controls
         protected Dictionary _hash_oNamedChildElements;
-        protected jQueryUIObject GetElement(string strId)
+        protected jQueryObject GetElement(string strId)
         {
             jQueryObject o = (jQueryObject)this._hash_oNamedChildElements[strId];
             if (Script.IsNullOrUndefined(o))
             {
                 throw new Exception("Element by id \"" + strId + "\" not found.");
             }
-            return (jQueryUIObject)o;
+            return (jQueryObject)o;
         }
 
         protected Dictionary _hash_oNamedChildControls;
@@ -732,14 +749,14 @@ namespace CMJ.UI
             return o;
         }
         private Dictionary _hash_rewrittenGroupNames;
-        protected jQueryUIObject GetGroup(string formFieldGroupname)
+        protected jQueryObject GetGroup(string formFieldGroupname)
         {
             string rewrittenName = (string)_hash_rewrittenGroupNames[formFieldGroupname];
             if (Script.IsNullOrUndefined(rewrittenName))
             {
                 throw new Exception("Group by name \"" + formFieldGroupname + "\" not found.");
             }
-            return (jQueryUIObject)this.RootElement.Find("*[name=" + rewrittenName + "]");
+            return (jQueryObject)this.RootElement.Find("*[name=" + rewrittenName + "]");
         }
 
         /// <summary>
