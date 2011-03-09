@@ -1,3 +1,12 @@
 Sharp UI is a control building framework for Script# and jQuery.
 
-The goal of the project is to replicate the kind of reusability and encapsulation that one would get using a library such as WPF, Java Swing, or WinForms, when building user interface controls.
+The goal of the project is to replicate the kind of reusability and encapsulation
+that one would get using a library such as WPF, Java Swing, or WinForms, 
+when building user interface controls.
+
+Features include:
+ * Locally-scoped CSS and CSS rewriting.
+ * Locally-scoped element IDs and ID rewriting.
+ * Auto field population (matching local ID's to field names).
+ * Nested declarations -- controls that hold instances of other controls.
+ * AddedToDocument/RemovedFromDocument events.
