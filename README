@@ -5,13 +5,15 @@ that one would get using a library such as WPF, Java Swing, or WinForms,
 when building user interface controls in Script# with jQuery.
 
 Features include:
- * Separation of logic and layout by using .html / .html.cs pairs and partial classes.
- * Locally-scoped CSS and CSS rewriting.
- * Locally-scoped element IDs and ID rewriting.
+ * Support for separation of logic from layout by using .html / .html.cs pairs
+   and partial classes.
+ * Support for locally-scoped CSS through CSS rewriting.
+ * Support for locally-identified elements through ID rewriting.
  * Automatic binding of member fields to named elements.
- * Nested instantiations -- controls can declare instances of other controls.
- * AddedToDocument/RemovedFromDocument events.
- * MouseCapture behavior.
+ * Support for nested instantiations -- controls can declare instances of other controls.
+ * Support for container controls and preservation of nested/inner content.
+ * AddedToDocument & RemovedFromDocument events.
+ * Replication of standard "mouse capture" behavior.
 
 Detailed documentation is pending. In the mean time please inspect the example
 code, or contact me on Twitter at @duckmaestro.
