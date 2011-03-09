@@ -5,6 +5,7 @@ that one would get using a library such as WPF, Java Swing, or WinForms,
 when building user interface controls in Script# with jQuery.
 
 Features include:
+ * Separation of logic and layout by using .html / .html.cs pairs and partial classes.
  * Locally-scoped CSS and CSS rewriting.
  * Locally-scoped element IDs and ID rewriting.
  * Automatic binding of member fields to named elements.
