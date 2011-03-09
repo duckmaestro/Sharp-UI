@@ -12,3 +12,6 @@ Features include:
  * Nested instantiations -- controls can declare instances of other controls.
  * AddedToDocument/RemovedFromDocument events.
  * MouseCapture behavior.
+
+Detailed documentation is pending. In the mean time please inspect the example
+code, or contact me on Twitter at @duckmaestro.
