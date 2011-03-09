@@ -1,0 +1,29 @@
+﻿using SharpUI;
+namespace SharpUI.Examples { partial class NetworkStatus { protected readonly string Template = @"
+
+<style>
+	#this 
+	{
+	    position:relative;
+	    min-width:80px;
+		min-height:50px;
+	}
+		
+	#imgAnimatedSpinner
+	{
+		display:none;
+	}
+	
+	#txtBytesTransferred
+	{
+		font-size:10px;
+	}
+
+</style>
+
+<div>
+	<img xid='imgAnimatedSpinner' src='./your_images/your_ajax_spinner.gif' />
+	<span xid='txtBytesTransferred'></span>
+</div>
+
+";}}

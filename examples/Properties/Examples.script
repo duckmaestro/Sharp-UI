@@ -1,0 +1,12 @@
+//! #= ScriptFile ##
+//
+
+(function() {
+function executeScript() {
+#include[as-is] "%code%"
+
+}
+ss.loader.registerScript('#= Name ##', [#= ExecutionDependencies ##], executeScript);
+})();
+
+//! This script was generated using Script# v#= CompilerVersion ##

@@ -1,0 +1,70 @@
+﻿using SharpUI;
+namespace SharpUI.Examples { partial class Form { protected readonly string Template = @"
+
+<!--
+	::Example Notes::
+	Style blocks are automatically rewritten and reused
+	across multiple instances of the control. Any rules
+	featuring '#this' are rewritten to refer
+	to the root div of the control. Rules featuring #someId
+	are rewritten and assumed to point to a locally named control
+	or element with corresponding xid attribute.
+-->
+
+<style>
+	#this 
+	{
+	    position:relative;
+	    width:400px;
+		height:250px;
+	}
+	
+	#this h2
+	{
+		font-family:Arial;
+	}
+	
+	#this .normalText
+	{
+		font-family:Courier New;
+		margin:10px 10px 10px 10px;
+	}
+	
+	#networkStatus
+	{
+		float:right;
+		width:150px;
+		height:80px;
+	}
+
+</style>
+
+<div>
+	<!--
+		::Example Notes::
+		Elements and controls may have local identifiers via
+		the 'xid' attribute. Any such elements will be
+		automatically bound to correspondingly named
+		fields in the class, and will have a unique (to the document)
+		id written for it, avoiding any global id clashes.
+	-->
+	<h2 xid='heading'>Sharp UI Example</h2>
+	
+	<!--
+		::Example Notes::
+		If you wish to declare an instance of another control, 
+		simply declare a div element, give it an optional xid,
+		and specify the desired control's type name via the
+		'control' attribute.
+	-->
+	<div xid='networkStatus' control='NetworkStatus'></div>
+
+	<div class='normalText'>
+		Lorem Ipsum Lorem Ipsum.
+	</div>
+
+	<input xid='btnGo' type='button' value='Go' />
+	<input xid='btnCancel' type='button' value='Cancel' />
+</div>
+
+";}}
