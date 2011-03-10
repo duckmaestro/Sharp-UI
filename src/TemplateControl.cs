@@ -213,7 +213,7 @@ namespace SharpUI
 
             // calculcate search namespace
             Type currentType = this.GetType();
-            string currentTopLevelNamespace 
+            string currentTopLevelNamespace
                 = currentType
                 .FullName
                 .Substr(0, currentType.FullName.IndexOf('.'))
@@ -228,7 +228,7 @@ namespace SharpUI
                 {
                     jQueryObject jqElement = jQuery.FromElement(element);
                     string strChildTypeName = jqElement.GetAttribute(AttributeNameControlClass);
-                    
+
                     string strChildTypeNameResolved
                         = ResolveTypeName(
                             strChildTypeName,
@@ -332,15 +332,23 @@ namespace SharpUI
                 jQueryObject jqLabels = _jqRootElement.Find("label[for]");
                 jqLabels.Each(delegate(int index, Element element)
                 {
-                    jQueryObject jqElement = jQuery.FromElement(element);
-                    string strForId = jqElement.GetAttribute("for");
+                    jQueryObject jqLabelElement = jQuery.FromElement(element);
+                    string strForId = jqLabelElement.GetAttribute("for");
                     // is this element rewritten?
-                    jQueryObject jqTargetElement = GetElement(strForId);
-                    string strTargetElementNewId = jqTargetElement.GetAttribute("id");
-                    if (!string.IsNullOrEmpty(strTargetElementNewId))
+                    jQueryObject jqTargetElement = TryGetElement(strForId);
+                    if (jqTargetElement == null)
                     {
-                        jqElement.Attribute("for", strTargetElementNewId);
+                        return;
                     }
+                    string strTargetElementNewId = jqTargetElement.GetAttribute("id");
+                    // make sure the "for" element has an id
+                    if (string.IsNullOrEmpty(strTargetElementNewId))
+                    {
+                        jqTargetElement.Attribute("id", strTargetElementNewId = GenerateNewAutoId());
+                    }
+                    jqLabelElement.Attribute("for", strTargetElementNewId);
+
+                    return;
                 });
             }
 
@@ -374,7 +382,7 @@ namespace SharpUI
         private static string FindTemplate(TemplateControl templateControl)
         {
             string templateTypeName = templateControl.GetType().FullName;
-            if(!_hash_templateCache.ContainsKey(templateTypeName))
+            if (!_hash_templateCache.ContainsKey(templateTypeName))
             {
                 string strTemplate = (string)Type.GetField(templateControl, "template");
                 if (!string.IsNullOrEmpty(strTemplate))
@@ -735,7 +743,12 @@ namespace SharpUI
             {
                 throw new Exception("Element by id \"" + strId + "\" not found.");
             }
-            return (jQueryObject)o;
+            return o;
+        }
+        protected jQueryObject TryGetElement(string strId)
+        {
+            jQueryObject o = (jQueryObject)this._hash_oNamedChildElements[strId];
+            return o ?? null;
         }
 
         protected Dictionary _hash_oNamedChildControls;
