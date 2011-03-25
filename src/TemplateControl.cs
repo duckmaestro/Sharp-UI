@@ -1188,6 +1188,10 @@ namespace SharpUI
             _mouseCaptureHandler(MouseCaptureState.Move, MakeJQueryPosition(e.PageX, e.PageY));
             e.PreventDefault(); // todo: avoid using this. prevents capturing mouse beyond window in IE.
             e.StopPropagation();
+            if (jQuery.Browser.MSIE)
+            {
+                Document.Selection.Clear();
+            }
         }
         private static void OnMouseUpDocument(jQueryEvent e)
         {
