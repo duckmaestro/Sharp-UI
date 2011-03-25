@@ -30,15 +30,15 @@ using jQueryApi;
 
 namespace SharpUI
 {
-    internal enum CssPosition
+    public enum CssPosition
     {
         Unspecified = 0,
         Absolute = 1,
         Relative = 2,
     }
 
-    internal enum MouseCaptureState { Begin = 0, Move = 1, End = 2 }
-    internal delegate void MouseCaptureHandler(MouseCaptureState state, jQueryPosition positionInDocument);
+    public enum MouseCaptureState { Begin = 0, Move = 1, End = 2 }
+    public delegate void MouseCaptureHandler(MouseCaptureState state, jQueryPosition positionInDocument);
 
     public abstract class TemplateControl
     {
@@ -936,7 +936,7 @@ namespace SharpUI
                 return RootElement.GetOuterHeight(false);
             }
         }
-        internal double PercentWidth
+        public double PercentWidth
         {
             private get
             {
@@ -951,7 +951,7 @@ namespace SharpUI
                 RootElement.Width(Math.Round(value).ToString() + "%");
             }
         }
-        internal double PercentHeight
+        public double PercentHeight
         {
             private get
             {
@@ -966,7 +966,7 @@ namespace SharpUI
                 RootElement.Height(Math.Round(value).ToString() + "%");
             }
         }
-        internal double PixelWidth
+        public double PixelWidth
         {
             private get
             {
@@ -981,7 +981,7 @@ namespace SharpUI
                 RootElement.Width(Math.Round(value).ToString() + "px");
             }
         }
-        internal double PixelHeight
+        public double PixelHeight
         {
             private get
             {
@@ -996,7 +996,7 @@ namespace SharpUI
                 RootElement.Height(Math.Round(value).ToString() + "px");
             }
         }
-        internal CssPosition LayoutPosition
+        public CssPosition LayoutPosition
         {
             get
             {
@@ -1036,7 +1036,7 @@ namespace SharpUI
                 RootElement.CSS("position", strValue);
             }
         }
-        internal double PixelLeft
+        public double PixelLeft
         {
             private get
             {
@@ -1051,7 +1051,7 @@ namespace SharpUI
                 this.RootElement.CSS("left", Math.Round(value).ToString() + "px");
             }
         }
-        internal double PixelTop
+        public double PixelTop
         {
             private get
             {
@@ -1066,7 +1066,7 @@ namespace SharpUI
                 this.RootElement.CSS("top", Math.Round(value).ToString() + "px");
             }
         }
-        internal int ZIndex
+        public int ZIndex
         {
             get
             {
@@ -1144,6 +1144,7 @@ namespace SharpUI
         {
             // grab document
             jQueryObject jqDocument = jQuery.FromObject(Window.Document);
+            jQueryObject jqBody = jqDocument.Find("body");
 
             // setup barrier
             {
@@ -1165,7 +1166,7 @@ namespace SharpUI
 #endif
                 jqBarrier.Hide();
                 _jqMouseCaptureGlassBarrier = jqBarrier;
-                jqDocument.Append(jqBarrier);
+                jqBody.Append(jqBarrier);
             }
 
             // setup mouse listeners
