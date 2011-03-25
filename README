@@ -4,6 +4,8 @@ The goal of the project is to enable basic reusability and encapsulation
 (a la the "user control" paradigm in WPF or ASP.NET) when building 
 client-side HTML user interface controls in Script# with jQuery.
 
+For live sample application see here: http://files.duck17.net/AnimationEditor/Default.htm.
+
 Features (or beneficial consequences) include:
  * Ability to construct reusable controls using
    HTML fragments and C# (Script#) codebehind.
