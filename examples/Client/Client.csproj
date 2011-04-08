@@ -12,13 +12,12 @@
     <TargetFrameworkProfile />
     <LangVersion>ISO-2</LangVersion>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Examples</RootNamespace>
-    <AssemblyName>Examples</AssemblyName>
+    <RootNamespace>SharpUI.Examples</RootNamespace>
+    <AssemblyName>SharpUI.Examples</AssemblyName>
     <TemplateFile>Properties\Examples.script</TemplateFile>
     <CodeAnalysisRuleSet>Properties\Examples.ruleset</CodeAnalysisRuleSet>
     <ReferencePath>$(ProgramFiles)\ScriptSharp\v1.0\Framework\</ReferencePath>
-    <DeploymentPath>
-    </DeploymentPath>
+    <DeploymentPath>..\Server\Scripts-SS</DeploymentPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -39,7 +38,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>0028, 1591, 1684</NoWarn>
-    <DocumentationFile>bin\Release\Examples.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\SharpUI.Examples.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="mscorlib, Version=0.6.3.0" />
@@ -53,6 +52,7 @@
     <Compile Include="..\..\src\TemplateControl.cs">
       <Link>TemplateControl.cs</Link>
     </Compile>
+    <Compile Include="Application.cs" />
     <Compile Include="NetworkStatus.html" />
     <Content Include="Properties\Examples.ruleset" />
     <Content Include="Properties\Examples.script" />

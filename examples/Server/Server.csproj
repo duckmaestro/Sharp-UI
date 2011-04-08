@@ -66,6 +66,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />
+    <Content Include="Scripts-SS\mscorlib.debug.js" />
+    <Content Include="Scripts-SS\mscorlib.js" />
+    <Content Include="Scripts-SS\SharpUI.Examples.debug.js" />
+    <Content Include="Scripts-SS\SharpUI.Examples.js" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
