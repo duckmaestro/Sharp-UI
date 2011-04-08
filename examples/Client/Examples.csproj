@@ -47,7 +47,10 @@
     <Reference Include="Script.Web" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\src\TemplateControl.cs">
+    <Compile Include="..\..\src\AdvancedLayout.cs">
+      <Link>AdvancedLayout.cs</Link>
+    </Compile>
+    <Compile Include="..\..\src\TemplateControl.cs">
       <Link>TemplateControl.cs</Link>
     </Compile>
     <Compile Include="NetworkStatus.html" />

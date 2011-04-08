@@ -30,11 +30,12 @@ using jQueryApi;
 
 namespace SharpUI
 {
-    public enum CssPosition
+    public enum Position
     {
         Unspecified = 0,
         Absolute = 1,
         Relative = 2,
+        Fixed = 3,
     }
 
     public enum MouseCaptureState { Begin = 0, Move = 1, End = 2 }
@@ -43,14 +44,12 @@ namespace SharpUI
     public abstract class TemplateControl
     {
         #region Constants
-        private const int DocumentTreeCheckInterval = 150;
         private const string AttributeNameLocalId = "xid";
         private const string AttributeNameControlClass = "control";
         private const string DataNameControl = "templateControl";
         public const string CssClassNameControl = "templateControl";
         private const string IdPrefixAutoRewrite = "auto_";
         private const string CssClassNamePrefixAutoRewrite = "css_auto_";
-        private const string IdChildContent = "childContent";
         #endregion
 
         private jQueryObject _jqRootElement;
@@ -71,10 +70,7 @@ namespace SharpUI
                 throw new Exception("Static construction already finished.");
             }
 #endif
-            if (_iCheckParentIntervalId == 0)
-            {
-                _iCheckParentIntervalId = Window.SetInterval(OnIntervalCheckParent, DocumentTreeCheckInterval);
-            }
+            InitDocumentDetection();
             InitDocumentMouseTracking();
             _bStaticConstructionFinished = true;
         }
@@ -435,7 +431,7 @@ namespace SharpUI
         }
         #endregion
 
-        #region CSS
+        #region CSS Rewriting
         private static Dictionary/*<typename,Dictionary<xid,cssClass>>*/ _hash_processedCss = new Dictionary();
         private static void ProcessCss(TemplateControl rootControl, string strRawCss)
         {
@@ -553,15 +549,27 @@ namespace SharpUI
         #endregion
 
         #region Document Detection
+        private const int DocumentTreeCheckInterval = 200;
+        
         protected event EventHandler AddedToDocument;
         protected event EventHandler RemovedFromDocument;
+        protected event EventHandler Presented;
         private bool _bInDocument;
+        private bool _bPresented;
         /// <remarks>
         /// according to (url) issued id's must be greater than 0. 
         /// url: http://www.whatwg.org/specs/web-apps/current-work/multipage/timers.html#timers
         /// </remarks>
         private static int _iCheckParentIntervalId = 0;
         private static Dictionary/*<*/ _hash_strControlIdsKnownInDocument = new Dictionary();
+
+        private static void InitDocumentDetection()
+        {
+            if (_iCheckParentIntervalId == 0)
+            {
+                _iCheckParentIntervalId = Window.SetInterval(OnIntervalCheckParent, DocumentTreeCheckInterval);
+            }
+        }
         private static void OnIntervalCheckParent()
         {
             // search for controls
@@ -570,15 +578,19 @@ namespace SharpUI
             ArrayList arr_oControlsToNotifyAdded = new ArrayList();
             jqControlsInDocument.Each(delegate(int i, Element e)
             {
-                jQueryObject jqE = jQuery.FromElement(e);
-                TemplateControl oControl = (TemplateControl)jqE.GetDataValue(DataNameControl);
-#if DEBUG
-                if (oControl == null)
+                jQueryObject rootElement = jQuery.FromElement(e);
+                TemplateControl control = (TemplateControl)rootElement.GetDataValue(DataNameControl);
+
+                if (control == null)
                 {
+#if DEBUG
                     throw new Exception("Control root element missing Control data. Did you use jQuery empty() or remove() by mistake?");
-                }
+#else
+                    return;
 #endif
-                string strInstanceId = oControl._strInstanceId;
+                }
+
+                string strInstanceId = control._strInstanceId;
 #if DEBUG
                 if (string.IsNullOrEmpty(strInstanceId.Trim()))
                 {
@@ -589,13 +601,23 @@ namespace SharpUI
                 if (!_hash_strControlIdsKnownInDocument.ContainsKey(strInstanceId))
                 {
                     // add to known controls
-                    _hash_strControlIdsKnownInDocument[strInstanceId] = oControl;
+                    _hash_strControlIdsKnownInDocument[strInstanceId] = control;
 
                     // set added to doc
-                    oControl._bInDocument = true;
+                    control._bInDocument = true;
 
                     // notify it was added
-                    arr_oControlsToNotifyAdded.Add(oControl);
+                    arr_oControlsToNotifyAdded.Add(control);
+                }
+
+                // newly presented?
+                if (!control._bPresented && control.Presented != null)
+                {
+                    if (rootElement.Is(":visible"))
+                    {
+                        control.NotifyPresented();
+                        control._bPresented = true;
+                    }
                 }
             });
             for (int i = arr_oControlsToNotifyAdded.Count - 1; i >= 0; --i)
@@ -636,6 +658,13 @@ namespace SharpUI
             if (RemovedFromDocument != null)
             {
                 RemovedFromDocument(this, null);
+            }
+        }
+        private void NotifyPresented()
+        {
+            if (Presented != null)
+            {
+                Presented(this, null);
             }
         }
         public jQueryObject DocumentBody
@@ -996,46 +1025,6 @@ namespace SharpUI
                 RootElement.Height(Math.Round(value).ToString() + "px");
             }
         }
-        public CssPosition LayoutPosition
-        {
-            get
-            {
-                string strPosition = RootElement.GetCSS("position") ?? string.Empty;
-                switch (strPosition.ToLowerCase())
-                {
-                    case "":
-                        return CssPosition.Unspecified;
-                    case "absolute":
-                        return CssPosition.Absolute;
-                    case "relative":
-                        return CssPosition.Relative;
-                    default:
-#if DEBUG
-                        throw new Exception("Unexpected css position value.");
-#else
-                        return CssPosition.Unspecified;
-#endif
-                }
-            }
-            set
-            {
-                string strValue;
-                switch (value)
-                {
-                    default:
-                    case CssPosition.Unspecified:
-                        strValue = string.Empty;
-                        break;
-                    case CssPosition.Absolute:
-                        strValue = "absolute";
-                        break;
-                    case CssPosition.Relative:
-                        strValue = "relative";
-                        break;
-                }
-                RootElement.CSS("position", strValue);
-            }
-        }
         public double PixelLeft
         {
             private get
@@ -1064,26 +1053,6 @@ namespace SharpUI
             set
             {
                 this.RootElement.CSS("top", Math.Round(value).ToString() + "px");
-            }
-        }
-        public int ZIndex
-        {
-            get
-            {
-                int zIndex;
-                try
-                {
-                    zIndex = Math.Round(Number.ParseFloat(RootElement.GetCSS("z-index")));
-                }
-                catch
-                {
-                    zIndex = 0;
-                }
-                return zIndex;
-            }
-            set
-            {
-                RootElement.CSS("z-index", value.ToString());
             }
         }
         #endregion
@@ -1144,7 +1113,6 @@ namespace SharpUI
         {
             // grab document
             jQueryObject jqDocument = jQuery.FromObject(Window.Document);
-            jQueryObject jqBody = jqDocument.Find("body");
 
             // setup barrier
             {
@@ -1166,7 +1134,7 @@ namespace SharpUI
 #endif
                 jqBarrier.Hide();
                 _jqMouseCaptureGlassBarrier = jqBarrier;
-                jqBody.Append(jqBarrier);
+                jqDocument.Append(jqBarrier);
             }
 
             // setup mouse listeners
@@ -1188,10 +1156,6 @@ namespace SharpUI
             _mouseCaptureHandler(MouseCaptureState.Move, MakeJQueryPosition(e.PageX, e.PageY));
             e.PreventDefault(); // todo: avoid using this. prevents capturing mouse beyond window in IE.
             e.StopPropagation();
-            if (jQuery.Browser.MSIE)
-            {
-                Document.Selection.Clear();
-            }
         }
         private static void OnMouseUpDocument(jQueryEvent e)
         {
@@ -1208,6 +1172,60 @@ namespace SharpUI
         private static jQueryPosition MakeJQueryPosition(double left, double top)
         {
             return (jQueryPosition)(Object)(new Dictionary("left", left, "top", top));
+        }
+        #endregion
+
+        #region Layout       
+        public int ZIndex
+        {
+            get
+            {
+                int zIndex;
+                try
+                {
+                    zIndex = Math.Round(Number.ParseFloat(RootElement.GetCSS("z-index")));
+                }
+                catch
+                {
+                    zIndex = 0;
+                }
+                return zIndex;
+            }
+            set
+            {
+                RootElement.CSS("z-index", value.ToString());
+            }
+        }
+
+        private Position _layoutPosition = Position.Unspecified;
+        public Position LayoutPosition
+        {
+            get
+            {
+                return _layoutPosition;
+            }
+            set
+            {
+                string cssValue;
+                switch (value)
+                {
+                    default:
+                    case Position.Unspecified:
+                        cssValue = string.Empty;
+                        break;
+                    case Position.Absolute:
+                        cssValue = "absolute";
+                        break;
+                    case Position.Relative:
+                        cssValue = "relative";
+                        break;
+                    case Position.Fixed:
+                        cssValue = "fixed";
+                        break;
+                }
+                RootElement.CSS("position", cssValue);
+                _layoutPosition = value;
+            }
         }
         #endregion
     }
