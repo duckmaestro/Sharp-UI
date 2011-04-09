@@ -48,6 +48,7 @@ namespace SharpUI
         private const string AttributeNameControlClass = "control";
         private const string DataNameControl = "templateControl";
         public const string CssClassNameControl = "templateControl";
+        public const string CssClassNameControlUnadded = "templateControlUnadded";
         private const string IdPrefixAutoRewrite = "auto_";
         private const string CssClassNamePrefixAutoRewrite = "css_auto_";
         #endregion
@@ -215,8 +216,11 @@ namespace SharpUI
                 .Substr(0, currentType.FullName.IndexOf('.'))
             ;
 
-            // add css class for identifying this as a template control
+            // add class for identifying this as a template control
             _jqRootElement.AddClass(CssClassNameControl);
+
+            // add class for identifying this as a newly added template control
+            _jqRootElement.AddClass(CssClassNameControlUnadded);
 
             // recurse into child controls
             jqContent.Find("div[" + AttributeNameControlClass + "]").Each(
@@ -242,7 +246,7 @@ namespace SharpUI
 #endif
                     }
 
-                    TemplateControl oChild = Type.CreateInstance(oChildType, null) as TemplateControl;
+                    TemplateControl childControl = Type.CreateInstance(oChildType, null) as TemplateControl;
 
                     // grab local id if any
                     string strLocalId = GetLocalId(jqElement) ?? GenerateNewAutoId();
@@ -250,7 +254,7 @@ namespace SharpUI
                     // store named control
                     if (strLocalId != null)
                     {
-                        this._hash_oNamedChildControls[strLocalId] = oChild;
+                        this._hash_oNamedChildControls[strLocalId] = childControl;
                     }
 
                     // merge style and class attributes
@@ -258,30 +262,53 @@ namespace SharpUI
                     string strStyle = jqElement.GetAttribute("style");
                     if (!string.IsNullOrEmpty(strClass))
                     {
-                        string strClassFromTemplate = oChild.RootElement.GetAttribute("class") ?? string.Empty;
-                        oChild.RootElement.Attribute("class", strClassFromTemplate + " " + strClass);
+                        string strClassFromTemplate = childControl.RootElement.GetAttribute("class") ?? string.Empty;
+                        childControl.RootElement.Attribute("class", strClassFromTemplate + " " + strClass);
                     }
                     if (!string.IsNullOrEmpty(strStyle))
                     {
-                        string strStyleFromTemplate = oChild.RootElement.GetAttribute("style") ?? string.Empty;
-                        oChild.RootElement.Attribute("style", strStyleFromTemplate + " " + strStyle);
+                        string strStyleFromTemplate = childControl.RootElement.GetAttribute("style") ?? string.Empty;
+                        childControl.RootElement.Attribute("style", strStyleFromTemplate + " " + strStyle);
+                    }
+
+                    // preserve other attributes
+                    for (int i = 0, m = jqElement[0].Attributes.Length; i < m; ++i)
+                    {
+                        ElementAttribute a = (ElementAttribute)Type.GetField(jqElement[0].Attributes, (string)(object)i);
+                        if (jQuery.Browser.Version == "7.0" && jQuery.Browser.MSIE && !a.Specified)
+                        {
+                            continue;
+                        }
+                        string attributeName = a.Name.ToLowerCase();
+                        switch (attributeName)
+                        {
+                            case "id":
+                            case "xid":
+                            case "class":
+                            case "style":
+                            case "control":
+                                break;
+                            default:
+                                childControl.RootElement.Attribute(a.Name, a.Value);
+                                break;
+                        }
                     }
 
                     // replace the placeholder element with the new control.
-                    jqElement.RemoveAttr("id").After(oChild.RootElement).Remove();
+                    jqElement.RemoveAttr("id").After(childControl.RootElement).Remove();
 
                     // preserve local id & control type name
                     if (strLocalId != null)
                     {
-                        oChild.RootElement.Attribute("xid", strLocalId);
+                        childControl.RootElement.Attribute("xid", strLocalId);
                     }
-                    oChild.RootElement.Attribute("control", jqElement.GetAttribute(AttributeNameControlClass));
+                    childControl.RootElement.Attribute("control", jqElement.GetAttribute(AttributeNameControlClass));
 
                     // any children content?
                     jQueryObject jqChildContent = jqElement.Find(">*");
                     if (jqChildContent.Length > 0)
                     {
-                        oChild.ProcessChildContent(jqChildContent);
+                        childControl.ProcessChildContent(jqChildContent);
                     }
                 }
             );
@@ -550,11 +577,10 @@ namespace SharpUI
 
         #region Document Detection
         private const int DocumentTreeCheckInterval = 200;
-        
+
         protected event EventHandler AddedToDocument;
         protected event EventHandler RemovedFromDocument;
         protected event EventHandler Presented;
-        private bool _bInDocument;
         private bool _bPresented;
         /// <remarks>
         /// according to (url) issued id's must be greater than 0. 
@@ -572,11 +598,44 @@ namespace SharpUI
         }
         private static void OnIntervalCheckParent()
         {
-            // search for controls
+            ArrayList arr_controlsToNotifyAdded = new ArrayList();
+
+            // search for missing controls or newly presented controls
+            {
+                foreach (DictionaryEntry kvp in _hash_strControlIdsKnownInDocument)
+                {
+                    string strInstanceId = kvp.Key;
+                    TemplateControl control = (TemplateControl)kvp.Value;
+
+                    //if (!hash_strControlsFound.ContainsKey(strInstanceId))
+                    if (!control.IsInDocument)
+                    {
+                        // remove from known controls
+                        _hash_strControlIdsKnownInDocument.Remove(strInstanceId);
+
+                        // notify removed.
+                        control.NotifyRemovedFromDocument();
+
+                        // mark as unadded
+                        control.RootElement.AddClass(CssClassNameControlUnadded);
+                    }
+
+                    // newly presented?
+                    if (!control._bPresented && control.Presented != null)
+                    {
+                        if (control.RootElement.Is(":visible"))
+                        {
+                            control.NotifyPresented();
+                            control._bPresented = true;
+                        }
+                    }
+                }
+            }
+
+            // search for new controls
             Dictionary hash_strControlsFound = new Dictionary();
-            jQueryObject jqControlsInDocument = jQuery.Select("." + CssClassNameControl);
-            ArrayList arr_oControlsToNotifyAdded = new ArrayList();
-            jqControlsInDocument.Each(delegate(int i, Element e)
+            jQueryObject newControls = jQuery.Select("." + CssClassNameControlUnadded);
+            newControls.Each(delegate(int i, Element e)
             {
                 jQueryObject rootElement = jQuery.FromElement(e);
                 TemplateControl control = (TemplateControl)rootElement.GetDataValue(DataNameControl);
@@ -603,48 +662,21 @@ namespace SharpUI
                     // add to known controls
                     _hash_strControlIdsKnownInDocument[strInstanceId] = control;
 
-                    // set added to doc
-                    control._bInDocument = true;
-
                     // notify it was added
-                    arr_oControlsToNotifyAdded.Add(control);
-                }
+                    arr_controlsToNotifyAdded.Add(control);
 
-                // newly presented?
-                if (!control._bPresented && control.Presented != null)
-                {
-                    if (rootElement.Is(":visible"))
-                    {
-                        control.NotifyPresented();
-                        control._bPresented = true;
-                    }
+                    // mark as added
+                    rootElement.RemoveClass(CssClassNameControlUnadded);
                 }
             });
-            for (int i = arr_oControlsToNotifyAdded.Count - 1; i >= 0; --i)
+
+            // notify controls that were added.
+            for (int i = arr_controlsToNotifyAdded.Count - 1; i >= 0; --i)
             {
-                TemplateControl controlToNotify = (TemplateControl)arr_oControlsToNotifyAdded[i];
+                TemplateControl controlToNotify = (TemplateControl)arr_controlsToNotifyAdded[i];
                 controlToNotify.NotifyAddedToDocument();
             }
-
-            // search for missing controls
-            {
-                foreach (DictionaryEntry kvp in _hash_strControlIdsKnownInDocument)
-                {
-                    string strInstanceId = kvp.Key;
-                    TemplateControl oControl = (TemplateControl)kvp.Value;
-                    if (!hash_strControlsFound.ContainsKey(strInstanceId))
-                    {
-                        // remove from known controls
-                        _hash_strControlIdsKnownInDocument.Remove(strInstanceId);
-
-                        // set removed from doc
-                        oControl._bInDocument = false;
-
-                        // notify removed.
-                        oControl.NotifyRemovedFromDocument();
-                    }
-                }
-            }
+            arr_controlsToNotifyAdded.Clear();
         }
         private void NotifyAddedToDocument()
         {
@@ -671,13 +703,32 @@ namespace SharpUI
         {
             get
             {
-                if (_bInDocument)
+                if (IsInDocument)
                 {
                     return jQuery.FromObject(Window.Document.Body);
                 }
                 else
                 {
                     return null;
+                }
+            }
+        }
+        private bool IsInDocument
+        {
+            get
+            {
+                Element e = this.RootElement[0];
+                while (true)
+                {
+                    e = e.ParentNode;
+                    if (e == null)
+                    {
+                        return false;
+                    }
+                    if (e.NodeType == ElementType.Document)
+                    {
+                        return true;
+                    }
                 }
             }
         }
@@ -944,7 +995,7 @@ namespace SharpUI
             get
             {
 #if DEBUG
-                if (!_bInDocument)
+                if (!IsInDocument)
                 {
                     throw new Exception("Control not added to document yet.");
                 }
@@ -957,7 +1008,7 @@ namespace SharpUI
             get
             {
 #if DEBUG
-                if (!_bInDocument)
+                if (!IsInDocument)
                 {
                     throw new Exception("Control not added to document yet.");
                 }
@@ -1175,7 +1226,7 @@ namespace SharpUI
         }
         #endregion
 
-        #region Layout       
+        #region Layout
         public int ZIndex
         {
             get

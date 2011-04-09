@@ -54,13 +54,40 @@ namespace SharpUI
         Stretch = 3,
     }
 
+    [IgnoreNamespace]
+    [Imported]
+    [ScriptName("Object")]
+    internal class AdvancedLayoutState
+    {
+        public Thickness Padding;
+        public Thickness Margin;
+        public float Width;
+        public float Height;
+        public VerticalAlignment VerticalAlignment;
+        public HorizontalAlignment HorizontalAlignment;
+        //public float ParentLastWidth;
+        //public float ParentLastHeight;
+    }
+
+    [IgnoreNamespace]
+    [Imported]
+    [ScriptName("Object")]
+    internal class DimensionsAndPadding
+    {
+        public float ClientWidth;
+        public float ClientHeight;
+        public float PaddingTop;
+        public float PaddingRight;
+        public float PaddingBottom;
+        public float PaddingLeft;
+    }
+
     public static class AdvancedLayout
     {
-        #region Layout
         public const string CssClassNameAdvancedLayout = "advancedLayout";
-        private const int LayoutEnforcementInterval = 250;
-        public const string AttributeNamePrefix = "al-";
-        
+        private const int LayoutEnforcementInterval = 500;
+        public const string AttributeNamePrefix = "al:";
+
         private static int _layoutEnforcementTimerId;
         private static jQueryObject _frameDetector;
 
@@ -72,7 +99,7 @@ namespace SharpUI
         private static void InitLayoutEnforcement()
         {
             _frameDetector = jQuery.FromHtml("<span></span");
-            _frameDetector.CSS(new Dictionary("position", "absolute", "height", "0px", "width","0px", "margin","0px", "padding","0px", "border", "none", "display", "block"));
+            _frameDetector.CSS(new Dictionary("position", "absolute", "height", "0px", "width", "0px", "margin", "0px", "padding", "0px", "border", "none", "display", "block"));
 
             if (_layoutEnforcementTimerId == 0)
             {
@@ -105,48 +132,211 @@ namespace SharpUI
                 throw new Exception("Element not marked for advanced layout.");
             }
 #endif
+            // does element have its al state parsed?
+            AdvancedLayoutState elementState = (AdvancedLayoutState)element.GetDataValue("__als");
+            if (elementState == null)
+            {
+                element.Data("__als", elementState = ParseAdvancedLayout(element));
+            }
 
-            jQueryObject offsetParent = element.OffsetParent();
+            // grab parents
             jQueryObject parent = element.Parent();
-
+            jQueryObject offsetParent = element.OffsetParent();
             if (offsetParent.Length == 0 || parent.Length == 0)
             {
                 return;
             }
 
             bool parentIsOffsetParent = offsetParent[0] == parent[0];
-
-            int parentInnerWidth = parent.GetInnerWidth();
-            int parentInnerHeight = parent.GetInnerHeight();
-            int elementWidth = element.GetInnerWidth();
-            int elementHeight = element.GetInnerHeight();
-
-            // gather parent padding
-            int parentPaddingTop, parentPaddingRight, parentPaddingBottom, parentPaddingLeft;
+#if DEBUG
+            if (!parentIsOffsetParent && element.Is(":visible"))
             {
-                parentPaddingTop = Number.Parse(parent.GetCSS("padding-top"));
-                parentPaddingRight = Number.Parse(parent.GetCSS("padding-right"));
-                parentPaddingBottom = Number.Parse(parent.GetCSS("padding-bottom"));
-                parentPaddingLeft = Number.Parse(parent.GetCSS("padding-left"));
+                throw new Exception("Parent must use position:absolute|fixed|relative;.");
+            }
+#endif
+            if (!parentIsOffsetParent)
+            {
+                return;
             }
 
+            // gather parent padding and client dimensions
+            DimensionsAndPadding parentDimensions = null;
+            parentDimensions = GetDimensionsAndPadding(parent);
+
             // detect parent's coordinates in offset-parent frame.
-            parent.Prepend(_frameDetector);
-            jQueryPosition parentPosition = _frameDetector.Position();
-            _frameDetector.Remove();
+            float contentStartInOffsetSpaceX, contentStartInOffsetSpaceY;
+            {
+                if (parentIsOffsetParent)
+                { // parent is offset parent. we know our local frame.
+                    contentStartInOffsetSpaceX = 0;
+                    contentStartInOffsetSpaceY = 0;
+                }
+                else
+                { // experimental support for staticly positioned parent.
+
+                    parent.Prepend(_frameDetector);
+
+                    jQueryPosition parentContentFrameInDocumentSpace = _frameDetector.GetOffset();
+                    jQueryPosition offsetParentFrameInDocumentSpace = offsetParent.GetOffset();
+                    if (parentContentFrameInDocumentSpace != null && offsetParentFrameInDocumentSpace != null)
+                    {
+                        contentStartInOffsetSpaceX = parentContentFrameInDocumentSpace.Left - offsetParentFrameInDocumentSpace.Left - parentDimensions.PaddingLeft;
+                        contentStartInOffsetSpaceY = parentContentFrameInDocumentSpace.Top - offsetParentFrameInDocumentSpace.Top - parentDimensions.PaddingTop;
+                    }
+                    else
+                    {
+                        jQueryPosition contentStartInOffsetSpace = _frameDetector.Position();
+                        if (contentStartInOffsetSpace != null)
+                        {
+                            contentStartInOffsetSpaceX = contentStartInOffsetSpace.Left - parentDimensions.PaddingLeft;
+                            contentStartInOffsetSpaceY = contentStartInOffsetSpace.Top - parentDimensions.PaddingTop;
+                        }
+                        else
+                        {
+                            contentStartInOffsetSpaceX = 0;
+                            contentStartInOffsetSpaceY = 0;
+                        }
+                    }
+
+                    _frameDetector.Remove();
+                }
+
+            }
+
+            double topBoundary = contentStartInOffsetSpaceY + parentDimensions.PaddingTop + elementState.Margin.Top;
+            double bottomBoundary = contentStartInOffsetSpaceY + parentDimensions.ClientHeight - parentDimensions.PaddingBottom - elementState.Margin.Bottom;
+            double leftBoundary = contentStartInOffsetSpaceX + parentDimensions.PaddingLeft + elementState.Margin.Left;
+            double rightBoundary = contentStartInOffsetSpaceX + parentDimensions.ClientWidth - parentDimensions.PaddingRight - elementState.Margin.Right;
 
 
-            // gather advanced margins
-            int marginTop, marginRight, marginBottom, marginLeft;
+            // determine where to position
+            int top = 0;
+            int left = 0;
+            int width = 0;
+            int height = 0;
+            switch (elementState.VerticalAlignment)
+            {
+                case VerticalAlignment.Top:
+                    height = Math.Round(elementState.Height - elementState.Padding.Top - elementState.Padding.Bottom);
+                    top = Math.Round(topBoundary);
+                    break;
+
+                case VerticalAlignment.Center:
+                    height = Math.Round(elementState.Height - elementState.Padding.Top - elementState.Padding.Bottom);
+                    top = Math.Round(topBoundary * 0.5 + bottomBoundary * 0.5 - height * 0.5);
+                    break;
+
+                case VerticalAlignment.Bottom:
+                    height = Math.Round(elementState.Height - elementState.Padding.Top - elementState.Padding.Bottom);
+                    top = Math.Round(contentStartInOffsetSpaceY + parentDimensions.ClientHeight - parentDimensions.PaddingBottom - elementState.Margin.Bottom - elementState.Height);
+                    break;
+
+                case VerticalAlignment.Stretch:
+                    height = Math.Round(bottomBoundary - topBoundary - elementState.Padding.Top - elementState.Padding.Bottom);
+                    top = Math.Round(topBoundary);
+                    break;
+
+            }
+            switch (elementState.HorizontalAlignment)
+            {
+                case HorizontalAlignment.Left:
+                    width = Math.Round(elementState.Width - elementState.Padding.Left - elementState.Padding.Right);
+                    left = Math.Round(leftBoundary);
+                    break;
+
+                case HorizontalAlignment.Center:
+                    width = Math.Round(elementState.Width - elementState.Padding.Left - elementState.Padding.Right);
+                    left = Math.Round(leftBoundary * 0.5 + rightBoundary * 0.5 - width * 0.5);
+                    break;
+
+                case HorizontalAlignment.Right:
+                    width = Math.Round(elementState.Width - elementState.Padding.Left - elementState.Padding.Right);
+                    left = Math.Round(contentStartInOffsetSpaceX + parentDimensions.ClientWidth - parentDimensions.PaddingRight - elementState.Margin.Right - elementState.Width);
+                    break;
+
+                case HorizontalAlignment.Stretch:
+                    width = Math.Round(rightBoundary - leftBoundary - elementState.Padding.Left - elementState.Padding.Right);
+                    left = Math.Round(leftBoundary);
+                    break;
+            }
+
+            if (width <= 0)
+            {
+                width = 0;
+            }
+            if (height <= 0)
+            {
+                height = 0;
+            }
+
+            element.CSS(
+                new Dictionary(
+                    "position", "absolute",
+                    "top", top,
+                    "left", left,
+                    "width", width,
+                    "height", height,
+                    "padding-top", elementState.Padding.Top,
+                    "padding-right", elementState.Padding.Right,
+                    "padding-bottom", elementState.Padding.Bottom,
+                    "padding-left", elementState.Padding.Left
+                )
+            );
+        }
+        private static DimensionsAndPadding GetDimensionsAndPadding(jQueryObject element)
+        {
+            DimensionsAndPadding d = new DimensionsAndPadding();
+
+            if (Type.HasMethod(typeof(Window), "getComputedStyle"))
+            {
+                Object computedStyle = Type.InvokeMethod(typeof(Window), "getComputedStyle", element[0]);
+                if (Type.HasField(computedStyle, "width"))
+                {
+                    d.ClientWidth = Number.Parse((string)Type.GetField(computedStyle, "width"));
+                    d.ClientHeight = Number.Parse((string)Type.GetField(computedStyle, "height"));
+                    d.PaddingTop = Number.Parse((string)Type.GetField(computedStyle, "paddingTop"));
+                    d.PaddingRight = Number.Parse((string)Type.GetField(computedStyle, "paddingRight"));
+                    d.PaddingBottom = Number.Parse((string)Type.GetField(computedStyle, "paddingBottom"));
+                    d.PaddingLeft = Number.Parse((string)Type.GetField(computedStyle, "paddingLeft"));
+                }
+                else
+                {
+                    d.ClientWidth = Number.Parse((string)Type.InvokeMethod(computedStyle, "getPropertyValue", "width"));
+                    d.ClientHeight = Number.Parse((string)Type.InvokeMethod(computedStyle, "getPropertyValue", "height"));
+                    d.PaddingTop = Number.Parse((string)Type.InvokeMethod(computedStyle, "getPropertyValue", "padding-top"));
+                    d.PaddingRight = Number.Parse((string)Type.InvokeMethod(computedStyle, "getPropertyValue", "padding-right"));
+                    d.PaddingBottom = Number.Parse((string)Type.InvokeMethod(computedStyle, "getPropertyValue", "padding-bottom"));
+                    d.PaddingLeft = Number.Parse((string)Type.InvokeMethod(computedStyle, "getPropertyValue", "padding-left"));
+                }
+                d.ClientWidth += d.PaddingLeft + d.PaddingRight;
+                d.ClientHeight += d.PaddingTop + d.PaddingBottom;
+                return d;
+            }
+            else
+            {
+                // gather parent padding
+                d.ClientWidth = element.GetInnerWidth();
+                d.ClientHeight = element.GetInnerHeight();
+                d.PaddingTop = Number.Parse(element.GetCSS("padding-top"));
+                d.PaddingRight = Number.Parse(element.GetCSS("padding-right"));
+                d.PaddingBottom = Number.Parse(element.GetCSS("padding-bottom"));
+                d.PaddingLeft = Number.Parse(element.GetCSS("padding-left"));
+                return d;
+            }
+        }
+        private static AdvancedLayoutState ParseAdvancedLayout(jQueryObject element)
+        {
+            // gather margins
+            float marginTop, marginRight, marginBottom, marginLeft;
             {
                 string margin = element.GetAttribute(AttributeNamePrefix + "margin");
                 if (!string.IsNullOrEmpty(margin))
                 {
-                    string[] marginSplit = margin.Trim().Split(" ");
-                    marginTop = int.Parse(marginSplit[0]);
-                    marginRight = int.Parse(marginSplit[1]);
-                    marginBottom = int.Parse(marginSplit[2]);
-                    marginLeft = int.Parse(marginSplit[3]);
+                    string[] split = margin.Trim().Split(" ");
+                    marginTop = float.Parse(split[0]);
+                    marginRight = float.Parse(split[1]);
+                    marginBottom = float.Parse(split[2]);
+                    marginLeft = float.Parse(split[3]);
                 }
                 else
                 {
@@ -157,14 +347,35 @@ namespace SharpUI
                 }
             }
 
-            // gather advanced dimensions
+            // gather padding
+            float paddingTop, paddingRight, paddingBottom, paddingLeft;
+            {
+                string padding = element.GetAttribute(AttributeNamePrefix + "padding");
+                if (!string.IsNullOrEmpty(padding))
+                {
+                    string[] split = padding.Trim().Split(" ");
+                    paddingTop = float.Parse(split[0]);
+                    paddingRight = float.Parse(split[1]);
+                    paddingBottom = float.Parse(split[2]);
+                    paddingLeft = float.Parse(split[3]);
+                }
+                else
+                {
+                    paddingTop = 0;
+                    paddingRight = 0;
+                    paddingBottom = 0;
+                    paddingLeft = 0;
+                }
+            }
+
+            // gather dimensions
             Number advancedWidth, advancedHeight;
             {
                 advancedWidth = Number.Parse(element.GetAttribute(AttributeNamePrefix + "width"));
                 advancedHeight = Number.Parse(element.GetAttribute(AttributeNamePrefix + "height"));
             }
 
-            // gather advanced vertical alignment
+            // gather vertical alignment
             VerticalAlignment verticalAlignment;
             switch (element.GetAttribute(AttributeNamePrefix + "vertical-alignment"))
             {
@@ -187,7 +398,7 @@ namespace SharpUI
                     break;
             }
 
-            // gather advanced horizontal alignment
+            // gather horizontal alignment
             HorizontalAlignment horizontalAlignment;
             switch (element.GetAttribute(AttributeNamePrefix + "horizontal-alignment"))
             {
@@ -211,7 +422,7 @@ namespace SharpUI
             }
 
             // override alignments
-            if(verticalAlignment != VerticalAlignment.Stretch && Number.IsNaN(advancedHeight))
+            if (verticalAlignment != VerticalAlignment.Stretch && Number.IsNaN(advancedHeight))
             {
                 verticalAlignment = VerticalAlignment.Stretch;
             }
@@ -220,63 +431,24 @@ namespace SharpUI
                 horizontalAlignment = HorizontalAlignment.Stretch;
             }
 
+            AdvancedLayoutState state = new AdvancedLayoutState();
+            state.Margin = new Thickness();
+            state.Padding = new Thickness();
 
-            // determine where
-            int top = 0;
-            int left = 0;
-            int width = 0;
-            int height = 0;
-            switch (verticalAlignment)
-            {
-                case VerticalAlignment.Top:
-                    top = Math.Round(marginTop + parentPosition.Top);
-                    height = advancedHeight;
-                    break;
+            state.Height = advancedHeight;
+            state.Width = advancedWidth;
+            state.VerticalAlignment = verticalAlignment;
+            state.HorizontalAlignment = horizontalAlignment;
+            state.Margin.Top = marginTop;
+            state.Margin.Right = marginRight;
+            state.Margin.Bottom = marginBottom;
+            state.Margin.Left = marginLeft;
+            state.Padding.Top = paddingTop;
+            state.Padding.Right = paddingRight;
+            state.Padding.Bottom = paddingBottom;
+            state.Padding.Left = paddingLeft;
 
-                case VerticalAlignment.Bottom:
-                    top = Math.Round(parentPosition.Top + parentInnerHeight - parentPaddingBottom - marginBottom - advancedHeight);
-                    height = Math.Round(advancedHeight);
-                    break;
-
-                case VerticalAlignment.Stretch:
-                    top = Math.Round(marginTop + parentPosition.Top);
-                    height = Math.Round(parentInnerHeight - marginBottom - marginTop - parentPaddingTop - parentPaddingBottom);
-                    break;
-
-            }
-            switch (horizontalAlignment)
-            {
-                case HorizontalAlignment.Left:
-                    left = Math.Round(marginLeft + parentPosition.Left);
-                    width = Math.Round(advancedWidth);
-                    break;
-
-                case HorizontalAlignment.Right:
-                    left = Math.Round(parentPosition.Left + parentInnerWidth - parentPaddingRight - marginRight - advancedWidth);
-                    width = Math.Round(advancedWidth);
-                    break;
-
-                case HorizontalAlignment.Stretch:
-                    left = Math.Round(marginLeft + parentPosition.Left);
-                    width = Math.Round(parentInnerWidth - marginRight - marginLeft - parentPaddingLeft - parentPaddingRight);
-                    break;
-            }
-            if (width <= 0)
-            {
-                width = 0;
-            }
-            if (height <= 0)
-            {
-                height = 0;
-            }
-
-            element.CSS("position", "absolute");
-            element.CSS("top", top + "px");
-            element.CSS("left", left + "px");
-            element.CSS("width", width + "px");
-            element.CSS("height", height + "px");
-
+            return state;
         }
-        #endregion
     }
 }
