@@ -101,6 +101,7 @@ namespace SharpUI
         public const string CssClassNameAdvancedLayout = "advancedLayout";
         private const int LayoutEnforcementInterval = 500;
         public const string AttributeNamePrefix = "al:";
+        private static readonly string AttributeNamePrefixEscaped = AttributeNamePrefix.Replace(":", "\\:");
         private const string DataNameLayoutState = "__als";
 
         private static int _layoutEnforcementTimerId;
@@ -386,8 +387,25 @@ namespace SharpUI
             // gather dimensions
             Number advancedWidth, advancedHeight;
             {
-                advancedWidth = Number.Parse(element.GetAttribute(AttributeNamePrefix + "width"));
-                advancedHeight = Number.Parse(element.GetAttribute(AttributeNamePrefix + "height"));
+                string width = element.GetAttribute(AttributeNamePrefix + "width");
+                string height = element.GetAttribute(AttributeNamePrefix + "height");
+                if (string.IsNullOrEmpty(width))
+                {
+                    advancedWidth = Number.NaN;
+                }
+                else
+                {
+                    advancedWidth = Number.Parse(width);
+                }
+
+                if (string.IsNullOrEmpty(height))
+                {
+                    advancedHeight = Number.NaN;
+                }
+                else
+                {
+                    advancedHeight = Number.Parse(height);
+                }
             }
 
             // gather vertical alignment
@@ -436,7 +454,7 @@ namespace SharpUI
                     break;
             }
 
-            // override alignments
+            // hack: override alignments
             if (verticalAlignment != VerticalAlignment.Stretch && Number.IsNaN(advancedHeight))
             {
                 verticalAlignment = VerticalAlignment.Stretch;
@@ -479,6 +497,28 @@ namespace SharpUI
                 elementAsJq = jQuery.FromObject(e);
             }
             return elementAsJq;
+        }
+
+        public static void AutoEnable(object elementSubtree)
+        {
+            string advancedLayoutSelector
+                = "*[" + AttributeNamePrefixEscaped + "horizontal-alignment][control!=]:not(." + CssClassNameAdvancedLayout + "), "
+                + "*[" + AttributeNamePrefixEscaped + "vertical-alignment][control!=]:not(." + CssClassNameAdvancedLayout + "), "
+                + "*[" + AttributeNamePrefixEscaped + "margin][control!=]:not(." + CssClassNameAdvancedLayout + "), "
+            ;
+
+            jQueryObject jqRoot = jQuery.FromObject(elementSubtree);
+
+            jqRoot.Find(advancedLayoutSelector).Each(
+                delegate(int i, Element e)
+                {
+                    AdvancedLayout.SetAdvancedLayout(e, true);
+                }
+            );
+            if (jqRoot.Is(advancedLayoutSelector))
+            {
+                AdvancedLayout.SetAdvancedLayout(jqRoot, true);
+            }
         }
 
         public static void SetAdvancedLayout(object e, bool enabled)

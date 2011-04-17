@@ -133,13 +133,13 @@ namespace SharpUI
             }
 #endif
             // generate an absolute id for this control
-            string strNewId = GenerateNewAutoId();
+            string newId = GenerateNewAutoId();
 
 #if DEBUG
             // is there a conflict in the auto gen'd id?
             {
-                int iNumOtherControlsWithId = jQuery.Select("#" + strNewId).Length;
-                if (iNumOtherControlsWithId != 0)
+                int numOtherControlsWithId = jQuery.Select("#" + newId).Length;
+                if (numOtherControlsWithId != 0)
                 {
                     throw new Exception("Auto generated id conflict.");
                 }
@@ -383,6 +383,9 @@ namespace SharpUI
 
             // auto fill members that point to elements/controls
             AutoFillMemberFields();
+
+            // any elements with advanced layout enabled?
+            AdvancedLayout.AutoEnable(_jqRootElement);
         }
         /// <summary>
         /// If this control instance had content placed inside its declaration, 
