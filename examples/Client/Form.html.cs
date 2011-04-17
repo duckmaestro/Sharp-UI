@@ -19,18 +19,13 @@ namespace SharpUI.Examples
          * the PreserveName attribute is necessary
          * to prevent obfuscation from interfering.
          * */
-        #region Elements
         [PreserveName]
         jQueryObject _btnGo = null;
-
         [PreserveName]
         jQueryObject _btnCancel = null;
-
         [PreserveName]
         NetworkStatus _networkStatus = null;
-        #endregion
 
-        #region Construction
         public Form()
         {
             this.AddedToDocument += new EventHandler(OnAddedToDocument);
@@ -38,9 +33,7 @@ namespace SharpUI.Examples
             this._btnGo.Click(OnBtnClickGo);
             this._btnCancel.Click(OnBtnClickCancel);
         }
-        #endregion
 
-        #region Event Handlers
         private void OnAddedToDocument(object sender, EventArgs e)
         {
         
@@ -60,6 +53,5 @@ namespace SharpUI.Examples
         {
             _networkStatus.ShowNetworkActivity(0);
         }
-        #endregion
     }
 }

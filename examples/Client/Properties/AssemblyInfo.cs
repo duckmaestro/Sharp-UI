@@ -5,4 +5,4 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-[assembly: ScriptAssembly("Examples")]
+[assembly: ScriptAssembly("SharpUI.Examples")]
