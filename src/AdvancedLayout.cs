@@ -36,6 +36,20 @@ namespace SharpUI
         public double Left;
         public double Top;
         public double Right;
+
+        [AlternateSignature]
+        public extern Thickness();
+        public Thickness(double top, double right, double bottom, double left)
+        {
+            if (Script.IsUndefined(top)) { top = 0; }
+            if (Script.IsUndefined(right)) { right = 0; }
+            if (Script.IsUndefined(bottom)) { bottom = 0; }
+            if (Script.IsUndefined(left)) { left = 0; }
+            this.Top = top;
+            this.Right = right;
+            this.Bottom = bottom;
+            this.Left = left;
+        }
     }
 
     public enum VerticalAlignment
@@ -87,6 +101,7 @@ namespace SharpUI
         public const string CssClassNameAdvancedLayout = "advancedLayout";
         private const int LayoutEnforcementInterval = 500;
         public const string AttributeNamePrefix = "al:";
+        private const string DataNameLayoutState = "__als";
 
         private static int _layoutEnforcementTimerId;
         private static jQueryObject _frameDetector;
@@ -133,10 +148,10 @@ namespace SharpUI
             }
 #endif
             // does element have its al state parsed?
-            AdvancedLayoutState elementState = (AdvancedLayoutState)element.GetDataValue("__als");
+            AdvancedLayoutState elementState = (AdvancedLayoutState)element.GetDataValue(DataNameLayoutState);
             if (elementState == null)
             {
-                element.Data("__als", elementState = ParseAdvancedLayout(element));
+                element.Data(DataNameLayoutState, elementState = ParseAdvancedLayout(element));
             }
 
             // grab parents
@@ -449,6 +464,41 @@ namespace SharpUI
             state.Padding.Left = paddingLeft;
 
             return state;
+        }
+
+        private static jQueryObject GetElementFromObject(object e)
+        {
+            jQueryObject elementAsJq;
+            TemplateControl tc = e as TemplateControl;
+            if (tc != null)
+            {
+                elementAsJq = tc.RootElement;
+            }
+            else
+            {
+                elementAsJq = jQuery.FromObject(e);
+            }
+            return elementAsJq;
+        }
+
+        public static void SetAdvancedLayout(object e, bool enabled)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(e);
+            if (enabled)
+            {
+                elementAsJq.AddClass(CssClassNameAdvancedLayout);
+            }
+            else
+            {
+                elementAsJq.Remove(CssClassNameAdvancedLayout);
+            }
+        }
+
+        public static void SetMargin(object e, Thickness margin)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(e);
+            elementAsJq.Attribute(AttributeNamePrefix + "margin", Math.Round(margin.Top) + " " + Math.Round(margin.Right) + " " + Math.Round(margin.Bottom) + " " + Math.Round(margin.Left));
+            elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
         }
     }
 }
