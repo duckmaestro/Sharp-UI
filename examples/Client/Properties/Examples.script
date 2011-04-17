@@ -1,12 +1,8 @@
 //! #= ScriptFile ##
 //
 
-(function() {
-function executeScript() {
+(function($) {
 #include[as-is] "%code%"
-
-}
-ss.loader.registerScript('#= Name ##', [#= ExecutionDependencies ##], executeScript);
-})();
+})(jQuery);
 
 //! This script was generated using Script# v#= CompilerVersion ##

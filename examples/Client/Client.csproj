@@ -12,7 +12,7 @@
     <TargetFrameworkProfile />
     <LangVersion>ISO-2</LangVersion>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SharpUI.Examples</RootNamespace>
+    <RootNamespace>Examples</RootNamespace>
     <AssemblyName>SharpUI.Examples</AssemblyName>
     <TemplateFile>Properties\Examples.script</TemplateFile>
     <CodeAnalysisRuleSet>Properties\Examples.ruleset</CodeAnalysisRuleSet>
@@ -41,9 +41,15 @@
     <DocumentationFile>bin\Release\SharpUI.Examples.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="mscorlib, Version=0.6.3.0" />
-    <Reference Include="Script.jQuery, Version=0.6.3.0, Culture=neutral, processorArchitecture=MSIL" />
-    <Reference Include="Script.Web" />
+    <Reference Include="mscorlib, Version=0.7.0.0">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Script.jQuery">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Script.Web">
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\AdvancedLayout.cs">
@@ -52,18 +58,16 @@
     <Compile Include="..\..\src\TemplateControl.cs">
       <Link>TemplateControl.cs</Link>
     </Compile>
-    <Compile Include="Application.cs" />
-    <Compile Include="NetworkStatus.html" />
+    <Compile Include="AdvancedLayout.html" />
     <Content Include="Properties\Examples.ruleset" />
     <Content Include="Properties\Examples.script" />
-    <Compile Include="NetworkStatus.html.cs" />
-    <Compile Include="Form.html">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Form.html.cs">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="AdvancedLayout.html.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Application.cs" />
+    <Compile Include="NetworkStatus.html.cs" />
+    <Compile Include="Form.html.cs" />
+    <Compile Include="NetworkStatus.html" />
+    <Compile Include="Form.html" />
   </ItemGroup>
   <Import Project="$(ProgramFiles)\ScriptSharp\v1.0\ScriptSharp.targets" />
 </Project>

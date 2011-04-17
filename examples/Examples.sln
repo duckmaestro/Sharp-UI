@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{0D271911-491E-4BC1-8480-40A39C763193}"
-EndProject
+# Visual Web Developer Express 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{6B74762E-E1AA-431F-9C48-21CC143ADCFD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{3192BB47-3885-41A7-ADBF-00DCD44E54B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,14 +11,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0D271911-491E-4BC1-8480-40A39C763193}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0D271911-491E-4BC1-8480-40A39C763193}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0D271911-491E-4BC1-8480-40A39C763193}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0D271911-491E-4BC1-8480-40A39C763193}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6B74762E-E1AA-431F-9C48-21CC143ADCFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6B74762E-E1AA-431F-9C48-21CC143ADCFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B74762E-E1AA-431F-9C48-21CC143ADCFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B74762E-E1AA-431F-9C48-21CC143ADCFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3192BB47-3885-41A7-ADBF-00DCD44E54B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3192BB47-3885-41A7-ADBF-00DCD44E54B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3192BB47-3885-41A7-ADBF-00DCD44E54B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3192BB47-3885-41A7-ADBF-00DCD44E54B3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
