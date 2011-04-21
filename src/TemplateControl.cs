@@ -355,6 +355,7 @@ namespace SharpUI
                 jQueryObject jqLabels = _jqRootElement.Find("label[for]");
                 jqLabels.Each(delegate(int index, Element element)
                 {
+                    if (_bPresented) { } // workaround to delegate bug in Script# 0.7.0.0
                     jQueryObject jqLabelElement = jQuery.FromElement(element);
                     string strForId = jqLabelElement.GetAttribute("for");
                     // is this element rewritten?
