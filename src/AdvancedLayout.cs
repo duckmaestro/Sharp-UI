@@ -501,23 +501,90 @@ namespace SharpUI
 
         public static void AutoEnable(object elementSubtree)
         {
-            string advancedLayoutSelector
-                = "*[" + AttributeNamePrefixEscaped + "horizontal-alignment][control!=]:not(." + CssClassNameAdvancedLayout + "), "
-                + "*[" + AttributeNamePrefixEscaped + "vertical-alignment][control!=]:not(." + CssClassNameAdvancedLayout + "), "
-                + "*[" + AttributeNamePrefixEscaped + "margin][control!=]:not(." + CssClassNameAdvancedLayout + "), "
-            ;
-
+		    // bug in jQuery prevents inspecting "abc:abc" style attributes in IE7/IE8 without an exception.
+        
             jQueryObject jqRoot = jQuery.FromObject(elementSubtree);
 
-            jqRoot.Find(advancedLayoutSelector).Each(
-                delegate(int i, Element e)
+
+            string advancedLayoutSelector;
+            bool checkAttributesDirectly;
+            if (jQuery.Browser.MSIE && Number.ParseFloat(jQuery.Browser.Version) < 9)
+            {
+                checkAttributesDirectly = true;
+                advancedLayoutSelector = "*[control!=]:not(." + CssClassNameAdvancedLayout + ")";
+            }
+            else
+            {
+                checkAttributesDirectly = false;
+                advancedLayoutSelector
+                    = "*[" + AttributeNamePrefixEscaped + "horizontal-alignment][control!=]:not(." + CssClassNameAdvancedLayout + "), "
+                    + "*[" + AttributeNamePrefixEscaped + "vertical-alignment][control!=]:not(." + CssClassNameAdvancedLayout + "), "
+                    + "*[" + AttributeNamePrefixEscaped + "margin][control!=]:not(." + CssClassNameAdvancedLayout + "), "
+                ;
+            }
+
+            ElementIterationCallback fnEnableAdvancedLayout;
+            if (checkAttributesDirectly)
+            {
+                fnEnableAdvancedLayout = new ElementIterationCallback(delegate(int i, Element e)
+                {
+                    bool hasAdvancedAttribute = false;
+
+                    try
+                    {
+                        hasAdvancedAttribute = hasAdvancedAttribute | e.GetAttribute(AttributeNamePrefix + "horizontal-alignment") != null;
+                    }
+                    catch { }
+                    try
+                    {
+                        hasAdvancedAttribute = hasAdvancedAttribute | e.GetAttribute(AttributeNamePrefix + "vertical-alignment") != null;
+                    }
+                    catch { }
+                    try
+                    {
+                        hasAdvancedAttribute = hasAdvancedAttribute | e.GetAttribute(AttributeNamePrefix + "margin") != null;
+                    }
+                    catch { }
+
+                    if(hasAdvancedAttribute)
+                    {
+                        AdvancedLayout.SetAdvancedLayout(e, true);
+                    }
+                });
+            }
+            else
+            {
+                fnEnableAdvancedLayout = new ElementIterationCallback(delegate(int i, Element e)
                 {
                     AdvancedLayout.SetAdvancedLayout(e, true);
-                }
-            );
-            if (jqRoot.Is(advancedLayoutSelector))
+                });
+            }
+
+            // search and enbable child elements
             {
-                AdvancedLayout.SetAdvancedLayout(jqRoot, true);
+                jqRoot.Find(advancedLayoutSelector).Each(fnEnableAdvancedLayout);
+            }
+
+
+            // check root now
+            {
+                if (checkAttributesDirectly)
+                {
+                    if (!string.IsNullOrEmpty(jqRoot.GetAttribute(AttributeNamePrefix + "horizontal-alignment"))
+                        || !string.IsNullOrEmpty(jqRoot.GetAttribute(AttributeNamePrefix + "vertical-alignment"))
+                        || !string.IsNullOrEmpty(jqRoot.GetAttribute(AttributeNamePrefix + "margin"))
+                    )
+                    {
+                        AdvancedLayout.SetAdvancedLayout(jqRoot, true);
+                    }
+                }
+                else
+                {
+                    if (jqRoot.Is(advancedLayoutSelector))
+                    {
+                        fnEnableAdvancedLayout(-1, jqRoot[0]);
+                    }
+                }
             }
         }
 
