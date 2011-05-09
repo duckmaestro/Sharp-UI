@@ -1,4 +1,4 @@
-Sharp UI is a control building framework for Script# and jQuery.
+Sharp UI is a control building framework for Script# (https://github.com/NikhilK/scriptsharp) and jQuery.
 
 The goal of the project is to enable basic reusability and encapsulation
 (a la the "user control" paradigm in WPF or ASP.NET) when building 
