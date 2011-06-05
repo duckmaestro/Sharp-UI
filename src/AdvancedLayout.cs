@@ -409,50 +409,12 @@ namespace SharpUI
             }
 
             // gather vertical alignment
-            VerticalAlignment verticalAlignment;
-            switch (element.GetAttribute(AttributeNamePrefix + "vertical-alignment"))
-            {
-                case "top":
-                case "Top":
-                    verticalAlignment = VerticalAlignment.Top;
-                    break;
-                case "center":
-                case "Center":
-                    verticalAlignment = VerticalAlignment.Center;
-                    break;
-                case "bottom":
-                case "Bottom":
-                    verticalAlignment = VerticalAlignment.Bottom;
-                    break;
-                default:
-                case "stretch":
-                case "Stretch":
-                    verticalAlignment = VerticalAlignment.Stretch;
-                    break;
-            }
+            VerticalAlignment verticalAlignment
+                = VerticalAlignmentFromString(element.GetAttribute(AttributeNamePrefix + "vertical-alignment"));
 
             // gather horizontal alignment
-            HorizontalAlignment horizontalAlignment;
-            switch (element.GetAttribute(AttributeNamePrefix + "horizontal-alignment"))
-            {
-                case "left":
-                case "Left":
-                    horizontalAlignment = HorizontalAlignment.Left;
-                    break;
-                case "center":
-                case "Center":
-                    horizontalAlignment = HorizontalAlignment.Center;
-                    break;
-                case "right":
-                case "Right":
-                    horizontalAlignment = HorizontalAlignment.Right;
-                    break;
-                default:
-                case "stretch":
-                case "Stretch":
-                    horizontalAlignment = HorizontalAlignment.Stretch;
-                    break;
-            }
+            HorizontalAlignment horizontalAlignment
+                = HorizontalAlignmentFromString(element.GetAttribute(AttributeNamePrefix + "horizontal-alignment"));
 
             // hack: override alignments
             if (verticalAlignment != VerticalAlignment.Stretch && Number.IsNaN(advancedHeight))
@@ -483,7 +445,6 @@ namespace SharpUI
 
             return state;
         }
-
         private static jQueryObject GetElementFromObject(object e)
         {
             jQueryObject elementAsJq;
@@ -498,11 +459,10 @@ namespace SharpUI
             }
             return elementAsJq;
         }
-
         public static void AutoEnable(object elementSubtree)
         {
-		    // bug in jQuery prevents inspecting "abc:abc" style attributes in IE7/IE8 without an exception.
-        
+            // bug in jQuery prevents inspecting "abc:abc" style attributes in IE7/IE8 without an exception.
+
             jQueryObject jqRoot = jQuery.FromObject(elementSubtree);
 
 
@@ -546,7 +506,7 @@ namespace SharpUI
                     }
                     catch { }
 
-                    if(hasAdvancedAttribute)
+                    if (hasAdvancedAttribute)
                     {
                         AdvancedLayout.SetAdvancedLayout(e, true);
                     }
@@ -588,6 +548,87 @@ namespace SharpUI
             }
         }
 
+        private static string VerticalAlignmentToString(VerticalAlignment a)
+        {
+            switch (a)
+            {
+                case VerticalAlignment.Top:
+                    return "top";
+                case VerticalAlignment.Center:
+                    return "center";
+                case VerticalAlignment.Bottom:
+                    return "bottom";
+                default:
+                case VerticalAlignment.Stretch:
+                    return "stretch";
+            }
+        }
+        private static VerticalAlignment VerticalAlignmentFromString(string a)
+        {
+            VerticalAlignment verticalAlignment;
+            switch (a)
+            {
+                case "top":
+                case "Top":
+                    verticalAlignment = VerticalAlignment.Top;
+                    break;
+                case "center":
+                case "Center":
+                    verticalAlignment = VerticalAlignment.Center;
+                    break;
+                case "bottom":
+                case "Bottom":
+                    verticalAlignment = VerticalAlignment.Bottom;
+                    break;
+                default:
+                case "stretch":
+                case "Stretch":
+                    verticalAlignment = VerticalAlignment.Stretch;
+                    break;
+            }
+            return verticalAlignment;
+        }
+        private static string HorizontalAlignmentToString(HorizontalAlignment a)
+        {
+            switch (a)
+            {
+                case HorizontalAlignment.Left:
+                    return "left";
+                case HorizontalAlignment.Center:
+                    return "center";
+                case HorizontalAlignment.Right:
+                    return "right";
+                default:
+                case HorizontalAlignment.Stretch:
+                    return "stretch";
+            }
+        }
+        private static HorizontalAlignment HorizontalAlignmentFromString(string a)
+        {
+            HorizontalAlignment horizontalAlignment;
+            switch (a)
+            {
+                case "left":
+                case "Left":
+                    horizontalAlignment = HorizontalAlignment.Left;
+                    break;
+                case "center":
+                case "Center":
+                    horizontalAlignment = HorizontalAlignment.Center;
+                    break;
+                case "right":
+                case "Right":
+                    horizontalAlignment = HorizontalAlignment.Right;
+                    break;
+                default:
+                case "stretch":
+                case "Stretch":
+                    horizontalAlignment = HorizontalAlignment.Stretch;
+                    break;
+            }
+            return horizontalAlignment;
+        }
+
         public static void SetAdvancedLayout(object e, bool enabled)
         {
             jQueryObject elementAsJq = GetElementFromObject(e);
@@ -600,11 +641,34 @@ namespace SharpUI
                 elementAsJq.Remove(CssClassNameAdvancedLayout);
             }
         }
-
         public static void SetMargin(object e, Thickness margin)
         {
             jQueryObject elementAsJq = GetElementFromObject(e);
             elementAsJq.Attribute(AttributeNamePrefix + "margin", Math.Round(margin.Top) + " " + Math.Round(margin.Right) + " " + Math.Round(margin.Bottom) + " " + Math.Round(margin.Left));
+            elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
+        }
+        public static void SetHeight(object e, double height)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(e);
+            elementAsJq.Attribute(AttributeNamePrefix + "height", Math.Round(height).ToString());
+            elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
+        }
+        public static void SetWidth(object e, double width)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(e);
+            elementAsJq.Attribute(AttributeNamePrefix + "width", Math.Round(width).ToString());
+            elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
+        }
+        public static void SetHorizontalAlignment(object e, HorizontalAlignment a)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(e);
+            elementAsJq.Attribute(AttributeNamePrefix + "horizontal-alignment", HorizontalAlignmentToString(a));
+            elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
+        }
+        public static void SetVerticalAlignment(object e, VerticalAlignment a)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(e);
+            elementAsJq.Attribute(AttributeNamePrefix + "vertical-alignment", VerticalAlignmentToString(a));
             elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
         }
     }
