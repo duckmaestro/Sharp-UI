@@ -24,7 +24,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Html;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using jQueryApi;
 
@@ -460,6 +459,18 @@ namespace SharpUI
             }
             return tc;
         }
+        internal static TemplateControl TryFromRootElement(object elem)
+        {
+#if DEBUG
+            if (elem == null)
+            {
+                throw new Exception("Element null.");
+            }
+#endif
+            jQueryObject jqElem = jQuery.FromElement((Element)elem);
+            TemplateControl tc = jqElem.GetDataValue(DataNameControl) as TemplateControl;
+            return tc;
+        }
         #endregion
 
         #region CSS Rewriting
@@ -530,6 +541,19 @@ namespace SharpUI
                 jQueryObject jqStyle;
                 if (jQuery.Browser.MSIE)
                 {
+                    // rewrite url()'s to be absolute (workaround for IE7/8/9 bug with relative paths in dynamically added css in iframes).
+                    {
+                        Location loc = Window.Location;
+                        string rootUrl
+                            = loc.Protocol
+                            + "//"
+                            + loc.HostnameAndPort
+                            + "/"
+                        ;
+                        strProcessedCss
+                            = strProcessedCss.ReplaceRegex(new RegularExpression(@"url\s*\(/", "g"), string.Format(@"url({0}", rootUrl));
+                    }
+
                     // setting inner html does not work on IE8. so we do a string concat here instead.
                     jqStyle = jQuery.FromHtml(@"<style type=""text/css"">" + strProcessedCss + @"</style>");
                 }
@@ -585,6 +609,7 @@ namespace SharpUI
         protected event EventHandler AddedToDocument;
         protected event EventHandler RemovedFromDocument;
         protected event EventHandler Presented;
+        protected event EventHandler LayoutUpdated;
         private bool _bPresented;
         /// <remarks>
         /// according to (url) issued id's must be greater than 0. 
@@ -701,6 +726,14 @@ namespace SharpUI
             if (Presented != null)
             {
                 Presented(this, null);
+            }
+        }
+        // hack: should consider merging AdvancedLayout into TemplateControl & making this private.
+        public void NotifyLayoutUpdated()
+        {
+            if (LayoutUpdated != null)
+            {
+                LayoutUpdated(this, null);
             }
         }
         public jQueryObject DocumentBody

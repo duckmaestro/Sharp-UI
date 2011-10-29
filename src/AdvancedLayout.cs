@@ -24,7 +24,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Html;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using jQueryApi;
 
@@ -107,6 +106,9 @@ namespace SharpUI
         private static int _layoutEnforcementTimerId;
         private static jQueryObject _frameDetector;
 
+        private const string DOMMutationEventNamespace = ".al";
+        private static int _deferredLayoutEnforcementTimer;
+
         static AdvancedLayout()
         {
             InitLayoutEnforcement();
@@ -117,24 +119,94 @@ namespace SharpUI
             _frameDetector = jQuery.FromHtml("<span></span");
             _frameDetector.CSS(new Dictionary("position", "absolute", "height", "0px", "width", "0px", "margin", "0px", "padding", "0px", "border", "none", "display", "block"));
 
-            if (_layoutEnforcementTimerId == 0)
+            // are mutation events supported?
+            if (Document.Implementation.HasFeature("MutationEvents", "2.0"))
             {
-                _layoutEnforcementTimerId = Window.SetInterval(OnLayoutEnforcement, LayoutEnforcementInterval);
+                MutationBindingEnable(true);
+            }
+            // no mutation events supported
+            else
+            {
+                if (_layoutEnforcementTimerId == 0)
+                {
+                    _layoutEnforcementTimerId = Window.SetInterval(OnIntervalEnforceLayout, LayoutEnforcementInterval);
+                }
             }
         }
-        private static void OnLayoutEnforcement()
+        private static void MutationBindingEnable(bool enable)
         {
-            jQueryObject controlsInDocument = jQuery.Select("." + CssClassNameAdvancedLayout);
-
-            for (int i = 0, m = controlsInDocument.Length; i < m; ++i)
+            if (enable)
             {
-                UpdateLayout(jQuery.FromElement(controlsInDocument[i]));
+                jQuery.Document.Bind("DOMSubtreeModified" + DOMMutationEventNamespace, OnDOMSubtreeModified);
+            }
+            else
+            {
+                jQuery.Document.Unbind("DOMSubtreeModified" + DOMMutationEventNamespace);
+            }
+        }
+        private static void OnDOMSubtreeModified(jQueryEvent e)
+        {
+            if (_deferredLayoutEnforcementTimer != 0)
+            {
+                // update already scheduled
+                return;
+            }
+            bool scheduleUpdate = false;
+
+            jQueryObject targetAsJq = jQuery.FromElement(e.Target);
+            if (targetAsJq.HasClass(CssClassNameAdvancedLayout))
+            {
+                scheduleUpdate = true;
+            }
+            jQueryObject targetChildrenWithAL = targetAsJq.Find("." + CssClassNameAdvancedLayout);
+            if (targetChildrenWithAL.Length > 0)
+            {
+                scheduleUpdate = true;
+            }
+
+            if (scheduleUpdate)
+            {
+                _deferredLayoutEnforcementTimer = Window.SetTimeout(OnTimeoutDeferredLayoutEnforcement, 5);
+            }
+
+        }
+        private static void OnTimeoutDeferredLayoutEnforcement()
+        {
+            MutationBindingEnable(false);
+            EnforceLayout(null);
+            MutationBindingEnable(true);
+            _deferredLayoutEnforcementTimer = 0;
+        }
+        private static void OnIntervalEnforceLayout()
+        {
+            EnforceLayout(null);
+        }
+        private static void EnforceLayout(jQueryObject elements)
+        {
+            jQueryObject controls;
+            if (elements == null)
+            {
+                controls = jQuery.Select("." + CssClassNameAdvancedLayout);
+            }
+            else
+            {
+                controls = elements;
+            }
+
+            for (int i = 0, m = controls.Length; i < m; ++i)
+            {
+                UpdateLayout(controls.Eq(i));
             }
         }
         private static void UpdateLayout(jQueryObject element)
         {
             Measure(element);
             Arrange(element);
+            TemplateControl tc = TemplateControl.TryFromRootElement(element);
+            if (tc != null)
+            {
+                tc.NotifyLayoutUpdated();
+            }
         }
         private static void Measure(jQueryObject element)
         {
@@ -569,20 +641,20 @@ namespace SharpUI
             switch (a)
             {
                 case "top":
-                case "Top":
+                //case "Top":
                     verticalAlignment = VerticalAlignment.Top;
                     break;
                 case "center":
-                case "Center":
+                //case "Center":
                     verticalAlignment = VerticalAlignment.Center;
                     break;
                 case "bottom":
-                case "Bottom":
+                //case "Bottom":
                     verticalAlignment = VerticalAlignment.Bottom;
                     break;
                 default:
                 case "stretch":
-                case "Stretch":
+                //case "Stretch":
                     verticalAlignment = VerticalAlignment.Stretch;
                     break;
             }
@@ -609,20 +681,20 @@ namespace SharpUI
             switch (a)
             {
                 case "left":
-                case "Left":
+                //case "Left":
                     horizontalAlignment = HorizontalAlignment.Left;
                     break;
                 case "center":
-                case "Center":
+                //case "Center":
                     horizontalAlignment = HorizontalAlignment.Center;
                     break;
                 case "right":
-                case "Right":
+                //case "Right":
                     horizontalAlignment = HorizontalAlignment.Right;
                     break;
                 default:
                 case "stretch":
-                case "Stretch":
+                //case "Stretch":
                     horizontalAlignment = HorizontalAlignment.Stretch;
                     break;
             }
@@ -644,9 +716,21 @@ namespace SharpUI
         public static void SetMargin(object e, Thickness margin)
         {
             jQueryObject elementAsJq = GetElementFromObject(e);
-            elementAsJq.Attribute(AttributeNamePrefix + "margin", Math.Round(margin.Top) + " " + Math.Round(margin.Right) + " " + Math.Round(margin.Bottom) + " " + Math.Round(margin.Left));
+            elementAsJq.Attribute(
+                AttributeNamePrefix + "margin",
+                Math.Round(margin.Top) + " " + Math.Round(margin.Right) + " " + Math.Round(margin.Bottom) + " " + Math.Round(margin.Left));
             elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
         }
+
+        public static void SetPadding(object e, Thickness padding)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(e);
+            elementAsJq.Attribute(
+                AttributeNamePrefix + "padding",
+                Math.Round(padding.Top) + " " + Math.Round(padding.Right) + " " + Math.Round(padding.Bottom) + " " + Math.Round(padding.Left));
+            elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
+        }
+        
         public static void SetHeight(object e, double height)
         {
             jQueryObject elementAsJq = GetElementFromObject(e);
@@ -670,6 +754,6 @@ namespace SharpUI
             jQueryObject elementAsJq = GetElementFromObject(e);
             elementAsJq.Attribute(AttributeNamePrefix + "vertical-alignment", VerticalAlignmentToString(a));
             elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
-        }
+        }        
     }
 }
