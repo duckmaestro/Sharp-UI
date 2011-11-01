@@ -98,7 +98,7 @@ namespace SharpUI
     public static class AdvancedLayout
     {
         public const string CssClassNameAdvancedLayout = "advancedLayout";
-        private const int LayoutEnforcementInterval = 500;
+        private const int LayoutEnforcementInterval = 600;
         public const string AttributeNamePrefix = "al:";
         private static readonly string AttributeNamePrefixEscaped = AttributeNamePrefix.Replace(":", "\\:");
         private const string DataNameLayoutState = "__als";
@@ -108,6 +108,7 @@ namespace SharpUI
 
         private const string DOMMutationEventNamespace = ".al";
         private static int _deferredLayoutEnforcementTimer;
+        private static bool _isUpdatingLayout = false; // used to stop an endless update loop in some browsers.
 
         static AdvancedLayout()
         {
@@ -154,28 +155,45 @@ namespace SharpUI
             bool scheduleUpdate = false;
 
             jQueryObject targetAsJq = jQuery.FromElement(e.Target);
-            if (targetAsJq.HasClass(CssClassNameAdvancedLayout))
+            if (!_isUpdatingLayout && targetAsJq.HasClass(CssClassNameAdvancedLayout))
             {
                 scheduleUpdate = true;
             }
-            jQueryObject targetChildrenWithAL = targetAsJq.Find("." + CssClassNameAdvancedLayout);
-            if (targetChildrenWithAL.Length > 0)
+            else
             {
-                scheduleUpdate = true;
+                jQueryObject targetChildrenWithAL = targetAsJq.Find("." + CssClassNameAdvancedLayout);
+                if (targetChildrenWithAL.Length > 0)
+                {
+                    scheduleUpdate = true;
+                }
             }
 
             if (scheduleUpdate)
             {
-                _deferredLayoutEnforcementTimer = Window.SetTimeout(OnTimeoutDeferredLayoutEnforcement, 5);
+                SchedulLayoutEnforcement();
+            }
+        }
+        public static void SchedulLayoutEnforcement()
+        {
+            if (_deferredLayoutEnforcementTimer != 0
+                || _layoutEnforcementTimerId != 0)
+            {
+                return;
             }
 
+            _deferredLayoutEnforcementTimer = Window.SetTimeout(OnTimeoutDeferredLayoutEnforcement, 10);
         }
         private static void OnTimeoutDeferredLayoutEnforcement()
         {
             MutationBindingEnable(false);
+            _isUpdatingLayout = true;
             EnforceLayout(null);
             MutationBindingEnable(true);
             _deferredLayoutEnforcementTimer = 0;
+            Window.SetTimeout(delegate
+            {
+                _isUpdatingLayout = false;
+            }, 1);
         }
         private static void OnIntervalEnforceLayout()
         {
@@ -597,7 +615,6 @@ namespace SharpUI
                 jqRoot.Find(advancedLayoutSelector).Each(fnEnableAdvancedLayout);
             }
 
-
             // check root now
             {
                 if (checkAttributesDirectly)
@@ -641,20 +658,20 @@ namespace SharpUI
             switch (a)
             {
                 case "top":
-                //case "Top":
+                    //case "Top":
                     verticalAlignment = VerticalAlignment.Top;
                     break;
                 case "center":
-                //case "Center":
+                    //case "Center":
                     verticalAlignment = VerticalAlignment.Center;
                     break;
                 case "bottom":
-                //case "Bottom":
+                    //case "Bottom":
                     verticalAlignment = VerticalAlignment.Bottom;
                     break;
                 default:
                 case "stretch":
-                //case "Stretch":
+                    //case "Stretch":
                     verticalAlignment = VerticalAlignment.Stretch;
                     break;
             }
@@ -681,32 +698,47 @@ namespace SharpUI
             switch (a)
             {
                 case "left":
-                //case "Left":
+                    //case "Left":
                     horizontalAlignment = HorizontalAlignment.Left;
                     break;
                 case "center":
-                //case "Center":
+                    //case "Center":
                     horizontalAlignment = HorizontalAlignment.Center;
                     break;
                 case "right":
-                //case "Right":
+                    //case "Right":
                     horizontalAlignment = HorizontalAlignment.Right;
                     break;
                 default:
                 case "stretch":
-                //case "Stretch":
+                    //case "Stretch":
                     horizontalAlignment = HorizontalAlignment.Stretch;
                     break;
             }
             return horizontalAlignment;
         }
-
-        public static void SetAdvancedLayout(object e, bool enabled)
+        /// <summary>
+        /// Is advanced layout currently enabled?
+        /// </summary>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        public static bool GetAdvancedLayout(object element)
         {
-            jQueryObject elementAsJq = GetElementFromObject(e);
+            jQueryObject elementAsJq = GetElementFromObject(element);
+            return elementAsJq.HasClass(CssClassNameAdvancedLayout);
+        }
+        /// <summary>
+        /// Enabled or disable advanced layout on the given element.
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="enabled"></param>
+        public static void SetAdvancedLayout(object element, bool enabled)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(element);
             if (enabled)
             {
                 elementAsJq.AddClass(CssClassNameAdvancedLayout);
+                SchedulLayoutEnforcement();
             }
             else
             {
@@ -730,7 +762,7 @@ namespace SharpUI
                 Math.Round(padding.Top) + " " + Math.Round(padding.Right) + " " + Math.Round(padding.Bottom) + " " + Math.Round(padding.Left));
             elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
         }
-        
+
         public static void SetHeight(object e, double height)
         {
             jQueryObject elementAsJq = GetElementFromObject(e);
@@ -754,6 +786,6 @@ namespace SharpUI
             jQueryObject elementAsJq = GetElementFromObject(e);
             elementAsJq.Attribute(AttributeNamePrefix + "vertical-alignment", VerticalAlignmentToString(a));
             elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
-        }        
+        }
     }
 }

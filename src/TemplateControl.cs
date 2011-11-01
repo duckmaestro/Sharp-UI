@@ -650,12 +650,13 @@ namespace SharpUI
                     }
 
                     // newly presented?
-                    if (!control._bPresented && control.Presented != null)
+                    if (!control._bPresented)
                     {
                         if (control.RootElement.Is(":visible"))
                         {
-                            control.NotifyPresented();
                             control._bPresented = true;
+                            control.NotifyPresented();
+                            AdvancedLayout.SchedulLayoutEnforcement();
                         }
                     }
                 }
