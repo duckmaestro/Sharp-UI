@@ -433,25 +433,7 @@ namespace SharpUI
         private static AdvancedLayoutState ParseAdvancedLayout(jQueryObject element)
         {
             // gather margins
-            float marginTop, marginRight, marginBottom, marginLeft;
-            {
-                string margin = element.GetAttribute(AttributeNamePrefix + "margin");
-                if (!string.IsNullOrEmpty(margin))
-                {
-                    string[] split = margin.Trim().Split(" ");
-                    marginTop = float.Parse(split[0]);
-                    marginRight = float.Parse(split[1]);
-                    marginBottom = float.Parse(split[2]);
-                    marginLeft = float.Parse(split[3]);
-                }
-                else
-                {
-                    marginTop = 0;
-                    marginRight = 0;
-                    marginBottom = 0;
-                    marginLeft = 0;
-                }
-            }
+            Thickness margin = GetMargin(element);
 
             // gather padding
             float paddingTop, paddingRight, paddingBottom, paddingLeft;
@@ -517,17 +499,12 @@ namespace SharpUI
             }
 
             AdvancedLayoutState state = new AdvancedLayoutState();
-            state.Margin = new Thickness();
-            state.Padding = new Thickness();
-
             state.Height = advancedHeight;
             state.Width = advancedWidth;
             state.VerticalAlignment = verticalAlignment;
             state.HorizontalAlignment = horizontalAlignment;
-            state.Margin.Top = marginTop;
-            state.Margin.Right = marginRight;
-            state.Margin.Bottom = marginBottom;
-            state.Margin.Left = marginLeft;
+            state.Margin = margin;
+            state.Padding = new Thickness();
             state.Padding.Top = paddingTop;
             state.Padding.Right = paddingRight;
             state.Padding.Bottom = paddingBottom;
@@ -742,8 +719,33 @@ namespace SharpUI
             }
             else
             {
-                elementAsJq.Remove(CssClassNameAdvancedLayout);
+                elementAsJq.RemoveClass(CssClassNameAdvancedLayout);
             }
+        }
+
+        public static Thickness GetMargin(object e)
+        {
+            jQueryObject elementAsJq = GetElementFromObject(e);
+            float marginTop, marginRight, marginBottom, marginLeft;
+            {
+                string margin = elementAsJq.GetAttribute(AttributeNamePrefix + "margin");
+                if (!string.IsNullOrEmpty(margin))
+                {
+                    string[] split = margin.Trim().Split(" ");
+                    marginTop = float.Parse(split[0]);
+                    marginRight = float.Parse(split[1]);
+                    marginBottom = float.Parse(split[2]);
+                    marginLeft = float.Parse(split[3]);
+                }
+                else
+                {
+                    marginTop = 0;
+                    marginRight = 0;
+                    marginBottom = 0;
+                    marginLeft = 0;
+                }
+            }
+            return new Thickness(marginTop, marginRight, marginBottom, marginLeft);
         }
         public static void SetMargin(object e, Thickness margin)
         {
