@@ -395,7 +395,7 @@ namespace SharpUI
 
             if (Type.HasMethod(typeof(Window), "getComputedStyle"))
             {
-                Object computedStyle = Type.InvokeMethod(typeof(Window), "getComputedStyle", element[0]);
+                Object computedStyle = Type.InvokeMethod(typeof(Window), "getComputedStyle", element[0], null);
                 if (Type.HasField(computedStyle, "width"))
                 {
                     d.ClientWidth = Number.Parse((string)Type.GetField(computedStyle, "width"));
@@ -750,10 +750,17 @@ namespace SharpUI
         public static void SetMargin(object e, Thickness margin)
         {
             jQueryObject elementAsJq = GetElementFromObject(e);
-            elementAsJq.Attribute(
-                AttributeNamePrefix + "margin",
-                Math.Round(margin.Top) + " " + Math.Round(margin.Right) + " " + Math.Round(margin.Bottom) + " " + Math.Round(margin.Left));
-            elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
+            if (margin == null)
+            {
+                elementAsJq.RemoveAttr(AttributeNamePrefix + "margin");
+            }
+            else
+            {
+                elementAsJq.Attribute(
+                    AttributeNamePrefix + "margin",
+                    Math.Round(margin.Top) + " " + Math.Round(margin.Right) + " " + Math.Round(margin.Bottom) + " " + Math.Round(margin.Left));
+                elementAsJq.Data(DataNameLayoutState, ParseAdvancedLayout(elementAsJq));
+            }
         }
 
         public static void SetPadding(object e, Thickness padding)
