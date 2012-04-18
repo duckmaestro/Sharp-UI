@@ -1,5 +1,5 @@
 ﻿/*
-Copyright (c) 2010, 2011 Clifford Champion
+Copyright (c) 2010, 2011, 2012 Clifford Champion
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -139,10 +139,12 @@ namespace SharpUI
             if (enable)
             {
                 jQuery.Document.Bind("DOMSubtreeModified" + DOMMutationEventNamespace, OnDOMSubtreeModified);
+                jQuery.Window.Bind("resize" + DOMMutationEventNamespace, OnWindowResize);
             }
             else
             {
                 jQuery.Document.Unbind("DOMSubtreeModified" + DOMMutationEventNamespace);
+                jQuery.Window.Unbind("resize" + DOMMutationEventNamespace);
             }
         }
         private static void OnDOMSubtreeModified(jQueryEvent e)
@@ -172,6 +174,16 @@ namespace SharpUI
             {
                 SchedulLayoutEnforcement();
             }
+        }
+        private static void OnWindowResize(jQueryEvent e)
+        {
+            if (_deferredLayoutEnforcementTimer != 0)
+            {
+                // update already scheduled
+                return;
+            }
+
+            SchedulLayoutEnforcement();
         }
         public static void SchedulLayoutEnforcement()
         {

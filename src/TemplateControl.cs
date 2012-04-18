@@ -1,5 +1,5 @@
 ﻿/*
-Copyright (c) 2010, 2011 Clifford Champion
+Copyright (c) 2010, 2011, 2012 Clifford Champion
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -246,6 +246,16 @@ namespace SharpUI
                     }
 
                     TemplateControl childControl = Type.CreateInstance(oChildType, null) as TemplateControl;
+
+                    if (!(childControl is TemplateControl)) 
+                    {
+                        // this check is still needed because of how the 'as' operator behaves in Script#.
+#if DEBUG
+                        throw new Exception("Control must derive from 'TemplateControl'.");
+#else
+                        return;
+#endif
+                    }
 
                     // grab local id if any
                     string strLocalId = GetLocalId(jqElement) ?? GenerateNewAutoId();
