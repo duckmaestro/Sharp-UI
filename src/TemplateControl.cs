@@ -949,7 +949,21 @@ namespace SharpUI
                         // for each field in this class.  TODO: this can be optimized with a custom lookup.
                         foreach (DictionaryEntry kvpField in thisAsDictionary)
                         {
-                            if (kvpField.Key.StartsWith(strFieldNameTemp) && Math.Abs(kvpField.Key.Length - strFieldNameTemp.Length) <= 2)
+                            string key = kvpField.Key;
+                            string keyDemangled;
+                            if (true)
+                            {
+                                int lastDollar = key.LastIndexOf('$');
+                                if (lastDollar != -1)
+                                {
+                                    keyDemangled = key.Substr(0, lastDollar);
+                                }
+                                else
+                                {
+                                    keyDemangled = key;
+                                }
+                            }
+                            if (keyDemangled == strFieldNameTemp && Math.Abs(kvpField.Key.Length - strFieldNameTemp.Length) <= 2)
                             {
                                 // only store the mapping if the found field is null (making it likely that it's a subclass field pointing to a control or element).
                                 if (kvpField.Value == null)
