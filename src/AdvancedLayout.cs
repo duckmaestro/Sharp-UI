@@ -107,8 +107,27 @@ namespace SharpUI
         private static jQueryObject _frameDetector;
 
         private const string DOMMutationEventNamespace = ".al";
+        private static readonly Dictionary DOMMutationElements = new Dictionary(
+            "div", true,
+            "DIV", true,
+            "img", true,
+            "IMG", true,
+            "span", true,
+            "SPAN", true,
+            "fieldset", true,
+            "FIELDSET", true,
+            "table", true,
+            "TABLE", true,
+            "input", true,
+            "INPUT", true,
+            "textarea", true,
+            "TEXTAREA", true,
+            "iframe", true,
+            "IFRAME", true
+        );
         private static int _deferredLayoutEnforcementTimer;
         private static bool _isUpdatingLayout = false; // used to stop an endless update loop in some browsers.
+
 
         static AdvancedLayout()
         {
@@ -155,6 +174,12 @@ namespace SharpUI
                 return;
             }
             bool scheduleUpdate = false;
+
+            // ignore certain element types
+            if (!DOMMutationElements.ContainsKey(e.Target.TagName))
+            {
+                return;
+            }
 
             jQueryObject targetAsJq = jQuery.FromElement(e.Target);
             if (!_isUpdatingLayout && targetAsJq.HasClass(CssClassNameAdvancedLayout))
