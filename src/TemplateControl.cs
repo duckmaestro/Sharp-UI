@@ -23,6 +23,7 @@ THE SOFTWARE.
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Html;
 using System.Runtime.CompilerServices;
 using jQueryApi;
@@ -50,6 +51,24 @@ namespace SharpUI
         public const string CssClassNameControlUnadded = "templateControlUnadded";
         private const string IdPrefixAutoRewrite = "auto_";
         private const string CssClassNamePrefixAutoRewrite = "css_auto_";
+        #endregion
+
+        #region Options
+        private static string _BaseUrlImages = string.Empty;
+        /// <summary>
+        /// Optional base url for images, image buttons, and css background images. 
+        /// </summary>
+        public static string BaseUrlImages
+        {
+            get
+            {
+                return _BaseUrlImages;
+            }
+            set
+            {
+                _BaseUrlImages = value ?? string.Empty;
+            }
+        }
         #endregion
 
         private jQueryObject _jqRootElement;
@@ -207,6 +226,33 @@ namespace SharpUI
                 ;
             }
 
+            // rewrite image and image button paths
+            {
+                string baseUrl = BaseUrlImages;
+                if (baseUrl.Length > 0)
+                {
+                    jqContent.Find("img, input[type=image]").Each(
+                        delegate(int i, Element e)
+                        {
+                            jQueryObject jqe = jQuery.FromElement(e);
+                            string src = jqe.GetAttribute("src");
+                            if (string.IsNullOrEmpty(src))
+                            {
+                                jqe.Attribute("src", "http://null-image");
+                                return;
+                            }
+
+                            if (src.StartsWith("http://") || src.StartsWith("https://"))
+                            {
+                                return;
+                            }
+
+                            jqe.Attribute("src", CombinePaths(baseUrl,src));
+                        }
+                    );
+                }
+            }
+
             // calculcate search namespace
             Type currentType = this.GetType();
             string currentTopLevelNamespace
@@ -221,7 +267,7 @@ namespace SharpUI
             // add class for identifying this as a newly added template control
             _jqRootElement.AddClass(CssClassNameControlUnadded);
 
-            // recurse into child controls
+            // recurse into child controls // todo: move this to *after* processing labels and images?
             jqContent.Find("div[" + AttributeNameControlClass + "]").Each(
                 delegate(int index, Element element)
                 {
@@ -322,7 +368,7 @@ namespace SharpUI
                 }
             );
 
-            // rewrite radio input groups
+            // rewrite radio input groups // todo: do this before processing child controls?
             {
                 jQueryObject jqRadioInputs = _jqRootElement.Find("input[type=radio]");
                 Dictionary hash_rewrittenGroupNames = new Dictionary();
@@ -359,7 +405,7 @@ namespace SharpUI
                 this._hash_rewrittenGroupNames = hash_rewrittenGroupNames;
             }
 
-            // rewrite label elements
+            // rewrite label elements // todo: do this before processing child controls?
             {
                 jQueryObject jqLabels = _jqRootElement.Find("label[for]");
                 jqLabels.Each(delegate(int index, Element element)
@@ -481,6 +527,20 @@ namespace SharpUI
             TemplateControl tc = jqElem.GetDataValue(DataNameControl) as TemplateControl;
             return tc;
         }
+
+        private static string CombinePaths(string p1, string p2)
+        {
+            if (p1.EndsWith('/'))
+            {
+                p1 = p1.Substr(0, p1.Length - 1);
+            }
+            if (p2.StartsWith('/'))
+            {
+                p2 = p2.Substr(1);
+            }
+
+            return string.Concat(p1, '/', p2);
+        }
         #endregion
 
         #region CSS Rewriting
@@ -501,7 +561,10 @@ namespace SharpUI
             // rewrite css rules if this is the first time loading this control.
             if (bIsNewStyleSet)
             {
-                string strProcessedCss = strRawCss.ReplaceRegex(
+                string strProcessedCss = strRawCss;
+
+                // rerewrite element id references
+                strProcessedCss = strProcessedCss.ReplaceRegex(
                     new RegularExpression(@"#[a-zA-Z]\w*", "g"),
                     delegate(string s)
                     {
@@ -547,23 +610,59 @@ namespace SharpUI
                     }
                 );
 
-                // add style head
-                jQueryObject jqStyle;
-                if (jQuery.Browser.MSIE)
+                // rewrite url paths
+                bool isIE = jQuery.Browser.MSIE;
+                string cssBaseUrl = BaseUrlImages;
+                if (cssBaseUrl.Length > 0 || isIE)
                 {
-                    // rewrite url()'s to be absolute (workaround for IE7/8/9 bug with relative paths in dynamically added css in iframes).
+                    RegularExpression rxUrl = new RegularExpression(@"url\w*\((.*)\)", "i");
+                    Func<string, bool> fnIsAbsolute = delegate(string url)
+                    {
+                        return url.StartsWith("http://") || url.StartsWith("https://");
+                    };
+                    string currentProtocolDomain;
                     {
                         Location loc = Window.Location;
-                        string rootUrl
+                        currentProtocolDomain
                             = loc.Protocol
                             + "//"
                             + loc.HostnameAndPort
                             + "/"
                         ;
-                        strProcessedCss
-                            = strProcessedCss.ReplaceRegex(new RegularExpression(@"url\s*\(/", "g"), string.Format(@"url({0}", rootUrl));
                     }
+                    strProcessedCss = strProcessedCss.ReplaceRegex(
+                        new RegularExpression(@":\w*url\w*\(""?.*""?\)", "ig"),
+                        delegate(string s)
+                        {
+                            string[] matches = rxUrl.Exec(s);
+                            Debug.Assert(matches.Length == 2);
 
+                            string url = matches[1];
+                            if (fnIsAbsolute(url))
+                            {
+                                // already absolute. no change needed.
+                                return s;
+                            }
+
+                            // prepend base url
+                            url = CombinePaths(cssBaseUrl, url);
+
+                            if (isIE && !fnIsAbsolute(url))
+                            {
+                                // rewrite url()'s to be absolute (workaround for IE7/8/9 bug with relative paths in dynamically added css in iframes).
+                                url = CombinePaths(currentProtocolDomain, url);
+                            }
+
+                            return string.Format(@":url(""{0}"")", url);
+                        }
+                    );
+                }
+
+
+                // add style head
+                jQueryObject jqStyle;
+                if (jQuery.Browser.MSIE)
+                {
                     // setting inner html does not work on IE8. so we do a string concat here instead.
                     jqStyle = jQuery.FromHtml(@"<style type=""text/css"">" + strProcessedCss + @"</style>");
                 }
