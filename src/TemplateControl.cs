@@ -51,12 +51,13 @@ namespace SharpUI
         public const string CssClassNameControlUnadded = "templateControlUnadded";
         private const string IdPrefixAutoRewrite = "auto_";
         private const string CssClassNamePrefixAutoRewrite = "css_auto_";
+        private const string CssGlobalNodeId = "SharpUIGlobalCSS";
         #endregion
 
         #region Options
         private static string _BaseUrlImages = string.Empty;
         /// <summary>
-        /// Optional base url for images, image buttons, and css background images. 
+        /// Optional base url for Images, image buttons, and css background Images. 
         /// </summary>
         public static string BaseUrlImages
         {
@@ -238,7 +239,14 @@ namespace SharpUI
                             string src = jqe.GetAttribute("src");
                             if (string.IsNullOrEmpty(src))
                             {
-                                jqe.Attribute("src", "http://null-image");
+                                string nullSrc = "http://null-image";
+
+                                if (Window.Location.Protocol == "https:")
+                                {
+                                    nullSrc = "https://null-image";
+                                }
+
+                                jqe.Attribute("src", nullSrc);
                                 return;
                             }
 
@@ -247,7 +255,7 @@ namespace SharpUI
                                 return;
                             }
 
-                            jqe.Attribute("src", CombinePaths(baseUrl,src));
+                            jqe.Attribute("src", CombinePaths(baseUrl, src));
                         }
                     );
                 }
@@ -293,7 +301,7 @@ namespace SharpUI
 
                     TemplateControl childControl = Type.CreateInstance(oChildType, null) as TemplateControl;
 
-                    if (!(childControl is TemplateControl)) 
+                    if (!(childControl is TemplateControl))
                     {
                         // this check is still needed because of how the 'as' operator behaves in Script#.
 #if DEBUG
@@ -544,7 +552,15 @@ namespace SharpUI
         #endregion
 
         #region CSS Rewriting
-        private static Dictionary/*<typename,Dictionary<xid,cssClass>>*/ _hash_processedCss = new Dictionary();
+        /// <summary>
+        /// Typename to Dictionary+(xid to dynamic css class name).
+        /// </summary>
+        private static Dictionary<string, Dictionary> _hash_processedCss = new Dictionary<string, Dictionary>();
+        /// <summary>
+        /// A concatenation of all rewritten css. 
+        /// Grows larger each time a new control is encountered that has CSS rules.
+        /// </summary>
+        private static string _processedCss = string.Empty;
         private static void ProcessCss(TemplateControl rootControl, string strRawCss)
         {
             // has this template been processed before?
@@ -658,21 +674,59 @@ namespace SharpUI
                     );
                 }
 
+                _processedCss = _processedCss + " " + strProcessedCss;
 
-                // add style head
+                
+                // update global style
+                jQueryObject jqHead = jQuery.Select("head");
                 jQueryObject jqStyle;
+
+
                 if (jQuery.Browser.MSIE)
                 {
+                    // if IE, we need to concat all style rules (otherwise hit a max css node limit in ie)
+
+                    // is there an existing global css node?
+                    jqStyle = jQuery.Select("#" + CssGlobalNodeId);
+                    Number ieVersion = Number.ParseDouble(jQuery.Browser.Version);
+
                     // setting inner html does not work on IE8. so we do a string concat here instead.
-                    jqStyle = jQuery.FromHtml(@"<style type=""text/css"">" + strProcessedCss + @"</style>");
+                    if (Number.IsFinite(ieVersion) && ieVersion <= 8)
+                    {
+                        // remove existing global style node if exists.
+                        if (jqStyle.Length != 0)
+                        {
+                            jqStyle.Remove();
+                        }
+
+                        // build new global style node.
+                        jqStyle = jQuery.FromHtml(@"<style type=""text/css"">" + _processedCss + @"</style>");
+                        jqStyle.Attribute("id", CssGlobalNodeId);
+                        jqHead.Append(jqStyle);
+                    }
+                    else
+                    {
+                        // create new global style node if missing.
+                        if (jqStyle.Length == 0)
+                        {
+                            jqStyle = jQuery.FromHtml(@"<style type=""text/css""></style>");
+                            jqStyle.Attribute("id", CssGlobalNodeId);
+                            jqHead.Append(jqStyle);
+                        }
+
+                        // modify global style node.
+                        jqStyle.Text(_processedCss);
+                    }
                 }
                 else
                 {
+                    // in non-ie, just append another css node.
+
                     jqStyle = jQuery.FromHtml(@"<style type=""text/css""></style>");
                     jqStyle.Html(strProcessedCss);
+                    jqHead.Append(jqStyle);
                 }
 
-                jQuery.Select("head").Append(jqStyle);
 
                 // save rewrite rules
                 _hash_processedCss[strControlType] = hash_xidsToCssClasses;
@@ -1442,3 +1496,4 @@ namespace SharpUI
         #endregion
     }
 }
+
